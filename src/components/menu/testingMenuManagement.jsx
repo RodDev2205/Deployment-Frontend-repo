@@ -39,60 +39,42 @@ export default function MenuManagementUI() {
     }
   };
 
-  const refreshProducts = async () => {
+  // fetch only archived products
+  const fetchArchivedItems = async () => {
+    await fetchProducts('archived');
+  };
+
+  // generic product fetcher, can request specific status
+  const fetchProducts = async (status = null) => {
     try {
+      setLoading(true);
       const token = localStorage.getItem("token");
-      if (!token) return;
-      // when calling from admin UI, supply specific menu_status
-      const res = await fetch(`${API_BASE}/menu?menu_status=${activeTab === 'Archived' ? 'archived' : 'active'}`, {
+      if (!token) {
+        setError("Not authenticated. Please login.");
+        setLoading(false);
+        return;
+      }
+      const statusParam = status || (activeTab === 'Archived' ? 'archived' : 'active');
+      const response = await fetch(`${API_BASE}/menu?menu_status=${statusParam}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error("Failed to fetch products");
-      const data = await res.json();
+      if (response.status === 401) {
+        localStorage.removeItem("token");
+        throw new Error("Unauthorized (401) - token missing or expired. Please login.");
+      }
+      if (!response.ok) throw new Error("Failed to fetch products");
+      const data = await response.json();
       setMenuItems(data);
     } catch (err) {
+      setError(err.message);
       console.error("Fetch products failed:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
   // Fetch products from API
   useEffect(() => {
-    const fetchProducts = async (status = null) => {
-      try {
-        setLoading(true);
-        const token = localStorage.getItem("token");
-        // guard: require token
-        if (!token) {
-          setError("Not authenticated. Please login.");
-          setLoading(false);
-          return;
-        }
-        // debug: log token presence (never log full token in production)
-        console.debug("fetchProducts: token present", !!token);
-
-        // determine which menu_status we want to request
-        const statusParam = status || (activeTab === 'Archived' ? 'archived' : 'active');
-        const response = await fetch(`${API_BASE}/menu?menu_status=${statusParam}`, {
-          headers: {
-            "Authorization": `Bearer ${token}`,
-          },
-        });
-        if (response.status === 401) {
-          // clear possible invalid token and provide clearer message
-          localStorage.removeItem("token");
-          throw new Error("Unauthorized (401) - token missing or expired. Please login.");
-        }
-        if (!response.ok) throw new Error("Failed to fetch products");
-        const data = await response.json();
-        setMenuItems(data);
-      } catch (err) {
-        setError(err.message);
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     const fetchCategories = async () => {
       try {
         const response = await fetch(`${API_BASE}/categories`);
@@ -180,7 +162,7 @@ export default function MenuManagementUI() {
               if (t === 'Declined') {
                 fetchDeclinedItems();
               } else if (t === 'Archived') {
-                fetchProducts('archived');
+                fetchArchivedItems();
               } else {
                 fetchProducts('active');
               }
