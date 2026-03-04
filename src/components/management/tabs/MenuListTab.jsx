@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useAlert } from "@/context/AlertContext";
 import API_BASE_URL from '../../../config/api';
 
 export default function MenuListTab() {
@@ -12,6 +13,9 @@ export default function MenuListTab() {
   const [loading, setLoading] = useState(false);
   const [linkedIngredients, setLinkedIngredients] = useState([]);
   const [loadingIngredients, setLoadingIngredients] = useState(false);
+
+  // alert hook
+  const { error, warning, success, info, confirm, danger } = useAlert();
 
   const ITEMS_PER_PAGE = 8;
   const API_URL = `${API_BASE_URL}/api/menu-superadmin/products`;
@@ -50,7 +54,7 @@ export default function MenuListTab() {
     if (!selectedProduct) return;
 
     if (status === "DECLINED" && note.trim() === "") {
-      alert("Please provide a note when declining.");
+      warning("Input Required", "Please provide a note when declining.");
       return;
     }
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { AlertTriangle } from "lucide-react";
+import { useAlert } from "@/context/AlertContext";
 import API_BASE_URL from '../../config/api';
 
 import InventoryTabs from "./InventoryTabs";
@@ -9,6 +10,7 @@ import PortionFormulaModal from "./PortionFormulaModal";
 
 // ================== Ingredient Modal ==================
 const IngredientModal = ({ onClose, onSave, item }) => {
+  const { error: alertError } = useAlert();
   const [form, setForm] = useState({
     name: item?.name || "",
     unit: item?.unit || "",
@@ -24,7 +26,7 @@ const IngredientModal = ({ onClose, onSave, item }) => {
 
   const saveHandler = () => {
     if (!form.name || !form.unit || form.quantity <= 0) {
-      alert("All fields are required!");
+      alertError("Validation", "All fields are required!");
       return;
     }
 
@@ -121,6 +123,7 @@ const LowStockModal = ({ lowStockItems, onClose }) => (
 // ================== MAIN COMPONENT ==================
 const InventoryManagement = () => {
   const [inventory, setInventory] = useState([]);
+  const { error: alertError, success } = useAlert();
   const [portions, setPortions] = useState([]);
 
   const [activeTab, setActiveTab] = useState("stock");
@@ -176,7 +179,7 @@ const InventoryManagement = () => {
       setShowAddModal(false);
     } catch (err) {
       console.error(err);
-      alert("Failed to save ingredient.");
+      alertError("Error", "Failed to save ingredient.");
     }
   };
 
@@ -197,7 +200,7 @@ const InventoryManagement = () => {
       setEditingItem(null);
     } catch (err) {
       console.error(err);
-      alert("Failed to update item.");
+      alertError("Error", "Failed to update item.");
     }
   };
 
@@ -222,7 +225,7 @@ const InventoryManagement = () => {
       await loadPortions();
     } catch (error) {
       console.error("Error saving portion:", error);
-      alert("Failed to save portion.");
+      alertError("Error", "Failed to save portion.");
     } finally {
       setEditingPortion(null);
       setShowPortionModal(false);

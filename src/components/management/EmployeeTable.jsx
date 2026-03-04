@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useAlert } from "@/context/AlertContext";
 import API_BASE_URL from '../../config/api';
 import { UserCircle, Users, Lock, Unlock, Eye, Pencil } from "lucide-react";
 
@@ -13,6 +14,7 @@ export default function UserList({ type }) {
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const { error: alertError } = useAlert();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -119,7 +121,7 @@ export default function UserList({ type }) {
         )
       );
     } catch (err) {
-      alert(err.message);
+      alertError("Error", err.message);
     }
   };
 

@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { X, Plus, Trash2 } from "lucide-react";
+import { useAlert } from "@/context/AlertContext";
 
 const PortionFormulaModal = ({ portion, inventory, onSave, onClose }) => {
   const [portionName, setPortionName] = useState("");
+  const { error: alertError } = useAlert();
   const [formula, setFormula] = useState([]); // [{ raw_item_id, qty }]
 
   // Pre-fill fields if editing
@@ -42,11 +44,11 @@ const PortionFormulaModal = ({ portion, inventory, onSave, onClose }) => {
   // Save handler
   const saveHandler = () => {
     if (!portionName) {
-      alert("Portion name is required!");
+      alertError("Validation", "Portion name is required!");
       return;
     }
     if (formula.length === 0) {
-      alert("Add at least one ingredient!");
+      alertError("Validation", "Add at least one ingredient!");
       return;
     }
     onSave({ portion_name: portionName, formula });

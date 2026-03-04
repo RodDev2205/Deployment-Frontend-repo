@@ -1,14 +1,16 @@
 import React, { useState } from "react";
+import { useAlert } from "@/context/AlertContext";
 
 export default function VoidTransactionModal({ onClose, onConfirm }) {
   const [passkey, setPasskey] = useState("");
+  const { error: alertError } = useAlert();
   const ADMIN_PASSKEY = "1234"; // Replace with secure key or fetch from backend
 
   const handleConfirm = () => {
     if (passkey === ADMIN_PASSKEY) {
       onConfirm();
     } else {
-      alert("Incorrect passkey! Access denied.");
+      alertError("Authorization", "Incorrect passkey! Access denied.");
     }
   };
 

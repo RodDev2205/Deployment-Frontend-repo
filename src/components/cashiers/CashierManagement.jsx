@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useAlert } from "@/context/AlertContext";
 import API_BASE_URL from '../../config/api';
 import CashierCard from "./CashierCard";
 import AddNewCashierForm from "./AddNewCashierForm";
@@ -7,6 +8,7 @@ import ResetPasswordModal from "./ResetPasswordModal";
 
 export default function CashierManagement() {
   const [cashiers, setCashiers] = useState([]);
+  const { error: alertError, success } = useAlert();
   const [editingCashier, setEditingCashier] = useState(null);
   const [resettingCashier, setResettingCashier] = useState(null);
 
@@ -51,7 +53,7 @@ export default function CashierManagement() {
       triggerNotification("Cashier added successfully!");
     } catch (err) {
       console.error("Error adding cashier:", err);
-      alert(err.message);
+      alertError("Error", err.message);
     }
   };
 
@@ -72,7 +74,7 @@ export default function CashierManagement() {
       triggerNotification("Status updated successfully!");
     } catch (err) {
       console.error("Failed to toggle status:", err);
-      alert(err.message);
+      alertError("Error", err.message);
     }
   };
 
@@ -102,7 +104,7 @@ export default function CashierManagement() {
       triggerNotification("Cashier updated successfully!");
     } catch (err) {
       console.error("Failed to update cashier:", err);
-      alert(err.message);
+      alertError("Error", err.message);
     }
   };
 
@@ -123,7 +125,7 @@ export default function CashierManagement() {
       triggerNotification("Password updated successfully!");
     } catch (err) {
       console.error("Failed to update password:", err);
-      alert(err.message);
+      alertError("Error", err.message);
     }
   };
 

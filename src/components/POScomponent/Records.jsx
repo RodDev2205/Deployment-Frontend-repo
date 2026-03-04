@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useAlert } from "@/context/AlertContext";
 import Modal from "./Modal/Modal";
 import TransactionDetailModal from "../POScomponent/Modal/TransactionDetailModal";
 import API_BASE_URL from '../../config/api';
@@ -13,6 +14,7 @@ export default function Records () {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalData, setModalData] = useState(null);
     const [detailLoading, setDetailLoading] = useState(false);
+    const { error } = useAlert();
 
     useEffect(() => {
         const token = localStorage.getItem("token");
@@ -51,11 +53,11 @@ export default function Records () {
                 setModalData(data);
                 setIsModalOpen(true);
             } else {
-                alert(data.message || "Failed to load transaction details");
+                error("Load Error", data.message || "Failed to load transaction details");
             }
         } catch (err) {
             console.error("Detail fetch error", err);
-            alert("Failed to load transaction details");
+            error("Load Error", "Failed to load transaction details");
         } finally {
             setDetailLoading(false);
         }

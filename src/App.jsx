@@ -1,5 +1,6 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { AlertProvider } from "./context/AlertContext";
 
 import Login from "./pages/Login";
 import AdminOwnerDashboard from "./pages/AdminDashboardPage";
@@ -18,7 +19,8 @@ import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
   return (
-    <Router>
+    <AlertProvider>
+      <Router>
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
         {/* PUBLIC ROUTE */}
@@ -83,6 +85,7 @@ function App() {
 
       </Routes>
     </Router>
+    </AlertProvider>
   );
 }
 

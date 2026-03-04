@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAlert } from "@/context/AlertContext";
 
 // 1. Added onSubmit to the props destructuring
 export default function AddBranchModal({ isOpen, onClose, onSubmit }) {
@@ -8,6 +9,7 @@ export default function AddBranchModal({ isOpen, onClose, onSubmit }) {
   const [openingTime, setOpeningTime] = useState("");
   const [closingTime, setClosingTime] = useState("");
   const [loading, setLoading] = useState(false);
+  const { success, error: alertError } = useAlert();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -33,11 +35,11 @@ export default function AddBranchModal({ isOpen, onClose, onSubmit }) {
       const data = await res.json();
 
       if (!res.ok) {
-        alert(data.message || "Failed to add branch");
+        alertError("Error", data.message || "Failed to add branch");
         return;
       }
 
-      alert("Branch added successfully ✅");
+      success("Branch Added", "Branch added successfully ✅");
 
       // 2. Trigger the parent refresh. 
       // If your backend returns the new branch in 'data.branch', pass that.
@@ -56,7 +58,7 @@ export default function AddBranchModal({ isOpen, onClose, onSubmit }) {
 
     } catch (err) {
       console.error(err);
-      alert("Server error");
+      alertError("Server Error", "Server error");
     } finally {
       setLoading(false);
     }

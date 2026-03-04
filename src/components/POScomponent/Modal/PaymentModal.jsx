@@ -1,7 +1,9 @@
 import React, { useState } from "react";
+import { useAlert } from "@/context/AlertContext";
 
 export default function PaymentModal({ totalAmount, onConfirm, onClose }) {
   const [paymentMethod, setPaymentMethod] = useState("cash");
+  const { error: alertError } = useAlert();
   const [amountPaid, setAmountPaid] = useState(totalAmount);
   const [discountType, setDiscountType] = useState("none");
   const [discountValue, setDiscountValue] = useState(0);
@@ -23,17 +25,17 @@ export default function PaymentModal({ totalAmount, onConfirm, onClose }) {
     const finalDiscountValue = parseFloat(discountValue) || 0;
 
     if (!paymentMethod) {
-      alert("Please select a payment method!");
+      alertError("Payment", "Please select a payment method!");
       return;
     }
 
     if (finalAmountPaid <= 0) {
-      alert("Amount paid must be greater than 0!");
+      alertError("Payment", "Amount paid must be greater than 0!");
       return;
     }
 
     if (!isValidPayment) {
-      alert("Amount paid is less than total!");
+      alertError("Payment", "Amount paid is less than total!");
       return;
     }
 

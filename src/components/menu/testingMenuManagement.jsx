@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useAlert } from "@/context/AlertContext";
 import AddMenuItemModal from "../menu/modal/AddMenuItemModal";
 import EditMenuItemModal from "../menu/modal/EditMenuItemModal";
 import { Edit2, Trash2, Search } from "lucide-react";
@@ -17,6 +18,9 @@ export default function MenuManagementUI() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState("Menu List");
+
+  // alert hooks
+  const { error: alertError, warning, success, confirm, danger } = useAlert();
 
   const API_BASE = `${API_BASE_URL}/api`;
 
@@ -132,23 +136,30 @@ export default function MenuManagementUI() {
   };
 
   const handleDelete = (productId) => {
-    if (window.confirm("Are you sure you want to delete this item?")) {
-      const token = localStorage.getItem("token");
-      fetch(`${API_BASE}/menu/${productId}`, {
-        method: "DELETE",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-        },
-      })
-        .then((res) => {
+    danger(
+      "Delete Item",
+      "Are you sure you want to delete this item?",
+      async () => {
+        try {
+          const token = localStorage.getItem("token");
+          const res = await fetch(`${API_BASE}/menu/${productId}`, {
+            method: "DELETE",
+            headers: {
+              "Authorization": `Bearer ${token}`,
+            },
+          });
           if (res.ok) {
             setMenuItems((prev) => prev.filter((item) => item.product_id !== productId));
+            success("Deleted", "Menu item removed successfully.");
           } else {
-            alert("Failed to delete item");
+            alertError("Delete Failed", "Failed to delete item");
           }
-        })
-        .catch((err) => console.error(err));
-    }
+        } catch (err) {
+          console.error(err);
+          alertError("Error", err.message);
+        }
+      }
+    );
   };
 
   return (

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useAlert } from "@/context/AlertContext";
 import API_BASE_URL from '../../config/api';
 
 export default function EditItemModal({ item, onClose, onUpdated }) {
@@ -10,6 +11,7 @@ export default function EditItemModal({ item, onClose, onUpdated }) {
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
+  const { error: alertError, warning, success, info, confirm, danger } = useAlert();
 
   // Fetch valid categories
   useEffect(() => {
@@ -52,14 +54,14 @@ export default function EditItemModal({ item, onClose, onUpdated }) {
 
     // Validate category
     if (!categories.find(cat => String(cat.category_id) === categoryId)) {
-      return alert("Please select a valid category.");
+      return alertError("Validation Error", "Please select a valid category.");
     }
 
-    if (!productName.trim()) return alert("Product name is required.");
-    if (!price || Number(price) <= 0) return alert("Price must be greater than 0.");
+    if (!productName.trim()) return alertError("Validation Error", "Product name is required.");
+    if (!price || Number(price) <= 0) return alertError("Validation Error", "Price must be greater than 0.");
 
     const token = localStorage.getItem("token");
-    if (!token) return alert("You are not authenticated.");
+    if (!token) return alertError("Authentication Error", "You are not authenticated.");
 
     setLoading(true);
 
@@ -84,14 +86,15 @@ export default function EditItemModal({ item, onClose, onUpdated }) {
 
       if (!res.ok) {
         console.error("Update failed:", data);
-        return alert(data.message || "Failed to update item. Check category.");
+        alertError("Update Failed", data.message || "Failed to update item. Check category.");
+        return;
       }
 
       if (typeof onUpdated === "function") onUpdated(data);
       onClose();
     } catch (err) {
       console.error("Submit error:", err);
-      alert("Something went wrong. Please try again.");
+      alertError("Error", "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
