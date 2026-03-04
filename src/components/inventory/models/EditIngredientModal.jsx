@@ -188,8 +188,8 @@ const EditIngredientModal = ({ isOpen, onClose, ingredient, onEdit }) => {
               onChange={handleChange}
               className="w-full px-4 py-2.5 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 focus:outline-none"
             >
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
+              <option value="available">Available</option>
+              <option value="unavailable">Unavailable</option>
             </select>
           </div>
 
