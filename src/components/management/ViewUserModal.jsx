@@ -86,9 +86,6 @@ export default function ViewUserModal({ isOpen, onClose, user, onEdit }) {
             <span className="text-gray-500">Username:</span>
             <span className="font-medium">{displayValue(userData.username)}</span>
 
-            <span className="text-gray-500">Email:</span>
-            <span className="font-medium">{displayValue(userData.email)}</span>
-
             <span className="text-gray-500">Contact:</span>
             <span className="font-medium">{displayValue(userData.contact)}</span>
           </div>
@@ -123,9 +120,6 @@ export default function ViewUserModal({ isOpen, onClose, user, onEdit }) {
             <span className="text-gray-500">Created At:</span>
             <span className="font-medium">{displayValue(userData.createdAt)}</span>
 
-            <span className="text-gray-500">Last Login:</span>
-            <span className="font-medium">{displayValue(userData.lastLogin)}</span>
-
             <span className="text-gray-500">Created By:</span>
             <span className="font-medium">{displayValue(userData.createdBy)}</span>
           </div>
@@ -133,19 +127,6 @@ export default function ViewUserModal({ isOpen, onClose, user, onEdit }) {
 
         {/* Footer */}
         <div className="mt-10 flex flex-col sm:flex-row justify-end gap-3 border-t pt-4">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-lg border text-gray-600 hover:bg-gray-100"
-          >
-            Close
-          </button>
-
-          <button
-            onClick={() => onEdit?.(userData)}
-            className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
-          >
-            Edit User
-          </button>
         </div>
       </div>
     </div>
