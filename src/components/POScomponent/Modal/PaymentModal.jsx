@@ -60,7 +60,7 @@ export default function PaymentModal({ totalAmount = 0, onConfirm, onClose }) {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+    <div className="bg-white rounded-lg shadow-lg p-6 w-full">
       <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
         Complete Payment
       </h2>
