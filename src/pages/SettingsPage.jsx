@@ -22,7 +22,7 @@ export default function SimpleSettings() {
 
         // Only fetch pin code if admin
         if (payload.role_id === 2) {
-          const res = await fetch(`${API_BASE_URL}/pin-code`, {
+          const res = await fetch(`${API_BASE_URL}api/admin/pin-code`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           if (!res.ok) throw new Error('Failed to fetch pin code');
