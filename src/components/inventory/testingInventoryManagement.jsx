@@ -182,11 +182,11 @@ const InventoryManagement = () => {
                         </span>
 
                         {isNoStock ? (
-                          <span className="text-xs text-white flex items-center gap-1 px-2 py-0.5 bg-red-100 rounded-full">
+                          <span className="text-xs text-white flex items-center gap-1 px-2 py-0.5 bg-red-300 rounded-full">
                             No Stock
                           </span>
                         ) : isLow ? (
-                          <span className="text-xs text-red-500 flex items-center gap-1 px-2 py-0.5 bg-yellow-100 rounded-full">
+                          <span className="text-xs text-red-500 flex items-center gap-1 px-2 py-0.5 bg-yellow-300 rounded-full">
                             <AlertTriangle size={14} /> Low
                           </span>
                         ) : null}
