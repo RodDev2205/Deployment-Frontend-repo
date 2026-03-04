@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp } from 'lucide-react';
+import API_BASE_URL from '../../config/api';
 import { useNavigate } from 'react-router-dom';
 
 const SalesOverview = () => {
