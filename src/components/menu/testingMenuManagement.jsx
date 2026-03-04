@@ -43,7 +43,7 @@ export default function MenuManagementUI() {
     try {
       const token = localStorage.getItem("token");
       if (!token) return;
-      const res = await fetch(`${API_BASE}/menu`, {
+      const res = await fetch(`${API_BASE}/menu?showArchived=1`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Failed to fetch products");
@@ -69,7 +69,8 @@ export default function MenuManagementUI() {
         // debug: log token presence (never log full token in production)
         console.debug("fetchProducts: token present", !!token);
 
-        const response = await fetch(`${API_BASE}/menu`, {
+        // admin view should request archived items as well
+        const response = await fetch(`${API_BASE}/menu?showArchived=1?showArchived=1`, {
           headers: {
             "Authorization": `Bearer ${token}`,
           },
@@ -119,7 +120,8 @@ export default function MenuManagementUI() {
     console.log("New Item:", item);
     // Refresh products after adding new item
     const token = localStorage.getItem("token");
-    fetch(`${API_BASE}/menu`, {
+    // include archived items when reloading administrative list
+    fetch(`${API_BASE}/menu?showArchived=1`, {
       headers: {
         "Authorization": `Bearer ${token}`,
       },
