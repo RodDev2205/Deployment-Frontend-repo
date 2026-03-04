@@ -1,50 +1,58 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useAlert } from "@/context/AlertContext";
 
-export default function PaymentModal({ totalAmount, onConfirm, onClose }) {
-  const [paymentMethod, setPaymentMethod] = useState("cash");
+export default function PaymentModal({ totalAmount = 0, onConfirm, onClose }) {
   const { error: alertError } = useAlert();
-  const [amountPaid, setAmountPaid] = useState(totalAmount);
+
+  const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [amountPaid, setAmountPaid] = useState("");
   const [discountType, setDiscountType] = useState("none");
-  const [discountValue, setDiscountValue] = useState(0);
+  const [discountValue, setDiscountValue] = useState("");
 
-  const discountAmount =
-    discountType === "percentage"
-      ? (totalAmount * discountValue) / 100
-      : discountType === "fixed"
-      ? discountValue
-      : 0;
+  // Ensure numbers are always safe
+  const safeTotal = Number(totalAmount) || 0;
+  const safeDiscountValue = Number(discountValue) || 0;
+  const safeAmountPaid = Number(amountPaid) || 0;
 
-  const finalAmount = totalAmount - discountAmount;
-  const change = amountPaid - finalAmount;
-  const isValidPayment = amountPaid >= finalAmount;
+  const discountAmount = useMemo(() => {
+    if (discountType === "percentage") {
+      return (safeTotal * safeDiscountValue) / 100;
+    }
+    if (discountType === "fixed") {
+      return safeDiscountValue;
+    }
+    return 0;
+  }, [discountType, safeDiscountValue, safeTotal]);
+
+  const finalAmount = Math.max(safeTotal - discountAmount, 0);
+  const change = safeAmountPaid - finalAmount;
+  const isValidPayment = safeAmountPaid >= finalAmount && finalAmount > 0;
 
   const handleConfirm = () => {
-    // Ensure amountPaid is a valid number
-    const finalAmountPaid = parseFloat(amountPaid) || 0;
-    const finalDiscountValue = parseFloat(discountValue) || 0;
-
     if (!paymentMethod) {
-      alertError("Payment", "Please select a payment method!");
+      alertError("Payment", "Please select a payment method.");
       return;
     }
 
-    if (finalAmountPaid <= 0) {
-      alertError("Payment", "Amount paid must be greater than 0!");
+    if (finalAmount <= 0) {
+      alertError("Payment", "Invalid total amount.");
       return;
     }
 
     if (!isValidPayment) {
-      alertError("Payment", "Amount paid is less than total!");
+      alertError("Payment", "Amount paid is insufficient.");
       return;
     }
 
     onConfirm({
       paymentMethod,
-      amountPaid: finalAmountPaid,
+      amountPaid: safeAmountPaid,
+      finalAmount,
+      change,
       discount: {
         type: discountType,
-        value: finalDiscountValue,
+        value: safeDiscountValue,
+        amount: discountAmount,
       },
     });
 
@@ -52,29 +60,38 @@ export default function PaymentModal({ totalAmount, onConfirm, onClose }) {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-xl">
-      <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Payment</h2>
+    <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+      <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
+        Complete Payment
+      </h2>
 
       <div className="flex flex-col lg:flex-row gap-4">
-        {/* Left Column - Order Summary & Payment Method */}
+
+        {/* LEFT COLUMN */}
         <div className="lg:w-1/2 space-y-6">
+
           {/* Order Summary */}
           <div className="bg-gray-50 p-4 rounded-lg space-y-2 text-sm">
-            <h3 className="font-semibold text-gray-700 mb-3">Order Summary</h3>
+            <h3 className="font-semibold text-gray-700 mb-3">
+              Order Summary
+            </h3>
+
             <div className="flex justify-between">
-              <span className="text-gray-600">Subtotal:</span>
-              <span className="font-semibold">₱{totalAmount.toFixed(2)}</span>
+              <span className="text-gray-600">Subtotal</span>
+              <span className="font-semibold">
+                ₱{safeTotal.toFixed(2)}
+              </span>
             </div>
 
             {discountAmount > 0 && (
               <div className="flex justify-between text-red-600">
-                <span>Discount:</span>
-                <span>-₱{discountAmount.toFixed(2)}</span>
+                <span>Discount</span>
+                <span>- ₱{discountAmount.toFixed(2)}</span>
               </div>
             )}
 
             <div className="border-t pt-2 flex justify-between font-bold text-lg">
-              <span>Total:</span>
+              <span>Total</span>
               <span>₱{finalAmount.toFixed(2)}</span>
             </div>
           </div>
@@ -82,14 +99,15 @@ export default function PaymentModal({ totalAmount, onConfirm, onClose }) {
           {/* Discount Section */}
           <div className="p-4 bg-blue-50 rounded-lg">
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Discount
+              Apply Discount
             </label>
+
             <div className="flex gap-2 mb-3">
               <select
                 value={discountType}
                 onChange={(e) => {
                   setDiscountType(e.target.value);
-                  setDiscountValue(0);
+                  setDiscountValue("");
                 }}
                 className="flex-1 border px-3 py-2 rounded text-sm"
               >
@@ -103,7 +121,7 @@ export default function PaymentModal({ totalAmount, onConfirm, onClose }) {
                   type="number"
                   value={discountValue}
                   onChange={(e) => setDiscountValue(e.target.value)}
-                  placeholder="Value"
+                  placeholder="0"
                   className="w-24 border px-3 py-2 rounded text-sm"
                   min="0"
                   step="0.01"
@@ -123,6 +141,7 @@ export default function PaymentModal({ totalAmount, onConfirm, onClose }) {
             <label className="block text-sm font-semibold text-gray-700 mb-3">
               Payment Method
             </label>
+
             <div className="grid grid-cols-3 gap-2">
               {["cash", "gcash", "card"].map((method) => (
                 <button
@@ -139,18 +158,21 @@ export default function PaymentModal({ totalAmount, onConfirm, onClose }) {
               ))}
             </div>
           </div>
+
         </div>
 
-        {/* Right Column - Payment Input & Change */}
+        {/* RIGHT COLUMN */}
         <div className="lg:w-1/2 space-y-6">
+
           {/* Amount Paid */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               Amount Paid
             </label>
+
             <input
               type="number"
-              value={amountPaid || ""}
+              value={amountPaid}
               onChange={(e) => setAmountPaid(e.target.value)}
               className="w-full border px-4 py-3 rounded text-xl font-semibold text-center"
               min="0"
@@ -160,10 +182,12 @@ export default function PaymentModal({ totalAmount, onConfirm, onClose }) {
             />
           </div>
 
-          {/* Change Display */}
+          {/* Change */}
           <div className="bg-green-50 p-4 rounded-lg">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-gray-700 font-semibold">Change:</span>
+            <div className="flex justify-between items-center">
+              <span className="font-semibold text-gray-700">
+                Change
+              </span>
               <span
                 className={`text-2xl font-bold ${
                   change >= 0 ? "text-green-600" : "text-red-600"
@@ -172,21 +196,15 @@ export default function PaymentModal({ totalAmount, onConfirm, onClose }) {
                 ₱{change.toFixed(2)}
               </span>
             </div>
+
             {change < 0 && (
               <p className="text-xs text-red-600 mt-1">
-                Amount paid is less than total
+                Amount paid is insufficient.
               </p>
             )}
           </div>
 
-          {/* Error Message */}
-          {!isValidPayment && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded text-sm">
-              ⚠️ Payment amount is insufficient!
-            </div>
-          )}
-
-          {/* Action Buttons */}
+          {/* Buttons */}
           <div className="flex gap-3 pt-2">
             <button
               onClick={onClose}
@@ -194,6 +212,7 @@ export default function PaymentModal({ totalAmount, onConfirm, onClose }) {
             >
               Cancel
             </button>
+
             <button
               onClick={handleConfirm}
               disabled={!isValidPayment}
@@ -206,6 +225,7 @@ export default function PaymentModal({ totalAmount, onConfirm, onClose }) {
               Confirm Payment
             </button>
           </div>
+
         </div>
       </div>
     </div>
