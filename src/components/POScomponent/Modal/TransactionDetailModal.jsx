@@ -15,10 +15,12 @@ export default function TransactionDetailModal({
   } = data;
 
   const [showVoidForm, setShowVoidForm] = React.useState(false);
+  const [voidType, setVoidType] = React.useState("full");
   const [reason, setReason] = React.useState("");
   const [adminPin, setAdminPin] = React.useState("");
   const [submittingVoid, setSubmittingVoid] = React.useState(false);
   const [voidError, setVoidError] = React.useState("");
+  const [voidQuantities, setVoidQuantities] = React.useState({});
 
   const [showRefundForm, setShowRefundForm] = React.useState(false);
   const [refundType, setRefundType] = React.useState("full");
@@ -116,6 +118,72 @@ export default function TransactionDetailModal({
         <div className="space-y-2 mt-4 border-t pt-4">
           <h3 className="font-semibold text-red-700">VOID TRANSACTION</h3>
           <div>
+            <label className="block text-sm font-medium mb-1">Void Type:</label>
+            <div className="space-x-4">
+              <label className="inline-flex items-center">
+                <input
+                  type="radio"
+                  name="voidType"
+                  value="full"
+                  checked={voidType === 'full'}
+                  onChange={() => { setVoidType('full'); setVoidQuantities({}); }}
+                  className="mr-2"
+                />Full
+              </label>
+              <label className="inline-flex items-center">
+                <input
+                  type="radio"
+                  name="voidType"
+                  value="partial"
+                  checked={voidType === 'partial'}
+                  onChange={() => setVoidType('partial')}
+                  className="mr-2"
+                />Partial
+              </label>
+            </div>
+          </div>
+
+          {voidType === 'partial' && (
+            <div className="space-y-2 mt-2">
+              <label className="block text-sm font-medium">Select items to void:</label>
+              <div className="bg-gray-50 p-2 rounded space-y-2 text-sm">
+                {remainingItems.map((it) => {
+                  const qty = voidQuantities[it.menu_id] || 0;
+                  const maxQty = it.remaining;
+                  return (
+                    <div key={it.menu_id} className="flex items-center justify-between">
+                      <span>{it.product_name || it.menu_id} (x{it.remaining})</span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => setVoidQuantities(prev => ({
+                            ...prev,
+                            [it.menu_id]: Math.max(0, qty - 1)
+                          }))}
+                          className="bg-gray-300 px-2 py-1 rounded hover:bg-gray-400"
+                          disabled={maxQty === 0}
+                        >
+                          −
+                        </button>
+                        <span className="w-6 text-center">{qty}</span>
+                        <button
+                          onClick={() => setVoidQuantities(prev => ({
+                            ...prev,
+                            [it.menu_id]: Math.min(maxQty, qty + 1)
+                          }))}
+                          className="bg-gray-300 px-2 py-1 rounded hover:bg-gray-400"
+                          disabled={maxQty === 0}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <div className="mt-2">
             <label className="block text-sm font-medium">Reason for void:</label>
             <input
               type="text"
@@ -147,17 +215,21 @@ export default function TransactionDetailModal({
                 setSubmittingVoid(true);
                 try {
                   const token = localStorage.getItem("token");
+                  const body = {
+                    transaction_id: transaction.transaction_id,
+                    reason,
+                    admin_pin: adminPin,
+                  };
+                  if (voidType === 'partial') {
+                    body.void_items = voidQuantities; // {menu_id:qty}
+                  }
                   const res = await fetch(`${API_BASE_URL}/api/pos/void`, {
                     method: "POST",
                     headers: {
                       "Content-Type": "application/json",
                       Authorization: `Bearer ${token}`,
                     },
-                    body: JSON.stringify({
-                      transaction_id: transaction.transaction_id,
-                      reason,
-                      admin_pin: adminPin,
-                    }),
+                    body: JSON.stringify(body),
                   });
                   const data = await res.json();
                   if (!res.ok) throw new Error(data.message || "Void failed");
