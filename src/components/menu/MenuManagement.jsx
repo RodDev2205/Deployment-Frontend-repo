@@ -10,7 +10,7 @@ export default function MenuManagement() {
   const [categories, setCategories] = useState([]);
   const [activeCategory, setActiveCategory] = useState("All Items");
   const [editingItem, setEditingItem] = useState(null);
-  const [activeTab, setActiveTab] = useState("Menu List");
+  const [activeTab, setActiveTab] = useState("Menu List"); // possible values: Menu List, Archived, Declined List
   const token = localStorage.getItem("token");
 
   const API_MENU = `${API_BASE_URL}/api/menu`;
@@ -20,7 +20,7 @@ export default function MenuManagement() {
   // ------------------- FETCH ON MOUNT -------------------
   useEffect(() => {
     fetchCategories();
-    fetchMenuItems();
+    fetchMenuItems('active');
   }, []);
 
   // ------------------- FETCH CATEGORIES -------------------
@@ -38,10 +38,18 @@ export default function MenuManagement() {
   };
 
   // ------------------- FETCH APPROVED MENU ITEMS -------------------
-  const fetchMenuItems = async () => {
+  const fetchMenuItems = async (status = null) => {
     try {
-      // include archived items for admin view
-      const res = await fetch(`${API_MENU}?showArchived=1`, {
+      // build query string based on desired status
+      let url = API_MENU;
+      const params = [];
+      if (status) {
+        params.push(`menu_status=${status}`);
+      }
+      if (params.length) {
+        url += `?${params.join("&")}`;
+      }
+      const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Failed to fetch menu items");
@@ -156,8 +164,11 @@ export default function MenuManagement() {
     setActiveCategory("All Items"); // reset category filter
     if (tab === "Declined List") {
       fetchDeclinedItems();
+    } else if (tab === "Archived") {
+      fetchMenuItems('archived');
     } else {
-      fetchMenuItems();
+      // Menu List (default)
+      fetchMenuItems('active');
     }
   };
 
@@ -167,7 +178,7 @@ export default function MenuManagement() {
 
       {/* ------------------- TAB TOGGLE ------------------- */}
       <div className="flex gap-4 mb-4">
-        {["Menu List", "Declined List"].map((tab) => (
+        {["Menu List", "Archived", "Declined List"].map((tab) => (
           <button
             key={tab}
             onClick={() => handleTabSwitch(tab)}

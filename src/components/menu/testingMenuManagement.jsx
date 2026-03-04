@@ -17,7 +17,7 @@ export default function MenuManagementUI() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState("Menu List");
+  const [activeTab, setActiveTab] = useState("Menu List"); // possible values: Menu List, Archived, Declined
 
   // alert hooks
   const { error: alertError, warning, success, confirm, danger } = useAlert();
@@ -43,7 +43,8 @@ export default function MenuManagementUI() {
     try {
       const token = localStorage.getItem("token");
       if (!token) return;
-      const res = await fetch(`${API_BASE}/menu?showArchived=1`, {
+      // when calling from admin UI, supply specific menu_status
+      const res = await fetch(`${API_BASE}/menu?menu_status=${activeTab === 'Archived' ? 'archived' : 'active'}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Failed to fetch products");
@@ -69,8 +70,9 @@ export default function MenuManagementUI() {
         // debug: log token presence (never log full token in production)
         console.debug("fetchProducts: token present", !!token);
 
-        // admin view should request archived items as well
-        const response = await fetch(`${API_BASE}/menu?showArchived=1?showArchived=1`, {
+        // determine which menu_status we want based on the current tab
+        const statusParam = activeTab === 'Archived' ? 'archived' : 'active';
+        const response = await fetch(`${API_BASE}/menu?menu_status=${statusParam}`, {
           headers: {
             "Authorization": `Bearer ${token}`,
           },
@@ -120,8 +122,8 @@ export default function MenuManagementUI() {
     console.log("New Item:", item);
     // Refresh products after adding new item
     const token = localStorage.getItem("token");
-    // include archived items when reloading administrative list
-    fetch(`${API_BASE}/menu?showArchived=1`, {
+    const statusParam = activeTab === 'Archived' ? 'archived' : 'active';
+    fetch(`${API_BASE}/menu?menu_status=${statusParam}`, {
       headers: {
         "Authorization": `Bearer ${token}`,
       },
@@ -178,10 +180,17 @@ export default function MenuManagementUI() {
 
       {/* Tabs */}
       <div className="flex gap-2 mt-4 mb-2">
-        {['Menu List', 'Declined'].map((t) => (
+        {['Menu List', 'Archived', 'Declined'].map((t) => (
           <button
             key={t}
-            onClick={() => { setActiveTab(t); if (t === 'Declined') fetchDeclinedItems(); }}
+            onClick={() => {
+              setActiveTab(t);
+              if (t === 'Declined') {
+                fetchDeclinedItems();
+              } else {
+                fetchProducts();
+              }
+            }}
             className={`px-4 py-2 rounded ${activeTab === t ? 'bg-green-600 text-white' : 'bg-white border'}`}
           >
             {t}
