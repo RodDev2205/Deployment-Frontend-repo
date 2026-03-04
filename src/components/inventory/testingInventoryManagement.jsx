@@ -181,11 +181,13 @@ const InventoryManagement = () => {
                       <span
                         className={`px-4 py-1.5 rounded-full text-xs font-medium ${
                           item.status === "available" ? "bg-green-100 text-green-700" :
-                          item.status === "low_stock" ? "bg-yellow-100 text-yellow-800" :
-                          item.status === "out_of_stock" ? "bg-gray-600 text-white" : "bg-gray-200 text-gray-600"
+                          item.status === "low_stock" ? "bg-yellow-100 text-yellow-700" :
+                          item.status === "out_of_stock" ? "bg-red-100 text-red-700" : "bg-gray-200 text-gray-600"
                         }`}
                       >
-                        {item.status}
+                        {item.status === "low_stock" ? "Low Stock" :
+                         item.status === "out_of_stock" ? "No Stock" :
+                         item.status}
                       </span>
                     </td>
 
