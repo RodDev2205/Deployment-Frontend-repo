@@ -31,7 +31,15 @@ const InventoryManagement = () => {
       }
 
       const data = JSON.parse(text);
-      setInventory(data);
+
+      // Ensure inventory is always an array
+      if (Array.isArray(data)) {
+        setInventory(data);
+      } else if (Array.isArray(data.data)) {
+        setInventory(data.data);
+      } else {
+        setInventory([]); // fallback safety
+      }
 
     } catch (error) {
       console.error("Fetch error:", error);
@@ -56,9 +64,12 @@ const InventoryManagement = () => {
   };
 
   // Low stock is determined by units (quantity) compared to low_stock_threshold
-  const lowStockItems = inventory.filter(
-    (item) => Number(item.quantity) <= Number(item.low_stock_threshold)
-  );
+  const lowStockItems = Array.isArray(inventory)
+    ? inventory.filter(
+        (item) =>
+          Number(item.quantity) <= Number(item.low_stock_threshold)
+      )
+    : [];
 
   if (loading) {
     return <div className="p-8">Loading inventory...</div>;
