@@ -52,6 +52,8 @@ export default function MenuManagementUI() {
       });
       if (!response.ok) throw new Error("Failed to fetch archived items");
       const data = await response.json();
+      console.log("fetchArchivedItems received data:", data);
+      console.log("Data lengths - received:", data.length, "menu_status values:", data.map(item => item.menu_status));
       setMenuItems(data);
     } catch (err) {
       console.error("fetchArchivedItems error", err);
