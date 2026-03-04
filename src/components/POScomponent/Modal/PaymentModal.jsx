@@ -52,12 +52,12 @@ export default function PaymentModal({ totalAmount, onConfirm, onClose }) {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl">
+    <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-xl">
       <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Payment</h2>
 
       <div className="flex flex-col lg:flex-row gap-4">
         {/* Left Column - Order Summary & Payment Method */}
-        <div className="flex-1 space-y-6">
+        <div className="lg:w-1/2 space-y-6">
           {/* Order Summary */}
           <div className="bg-gray-50 p-4 rounded-lg space-y-2 text-sm">
             <h3 className="font-semibold text-gray-700 mb-3">Order Summary</h3>
@@ -142,7 +142,7 @@ export default function PaymentModal({ totalAmount, onConfirm, onClose }) {
         </div>
 
         {/* Right Column - Payment Input & Change */}
-        <div className="flex-1 space-y-6">
+        <div className="lg:w-1/2 space-y-6">
           {/* Amount Paid */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
