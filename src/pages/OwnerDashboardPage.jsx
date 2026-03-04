@@ -28,8 +28,8 @@ const DashboardLayout = () => {
 
   // compute display values
   const totalSales = stats ? `₱ ${Number(stats.total_sales).toLocaleString()}` : '—';
-  const totalTrans = stats ?
-    `${stats.status_counts.completed + stats.status_counts.partial_refunded + stats.status_counts.refunded + stats.status_counts.voided} Orders` : '—';
+  // Only count COMPLETED transactions (not refunded, voided, or partially refunded)
+  const totalTrans = stats ? `${Number(stats.status_counts.completed)} Orders` : '—';
   const activeEmps = stats ? `${stats.active_employees} Active` : '—';
   const lowStock = stats ? `${stats.low_stock} items` : '—';
 

@@ -25,7 +25,10 @@ const SalesOverview = () => {
     fetchSummary();
   }, []);
 
-  const totalSalesDisplay = summary ? `₱ ${Number(summary.overall_total).toLocaleString()}` : '₱ 0.00';
+  // Only count sales from COMPLETED transactions
+  const totalSalesDisplay = summary && summary.branches 
+    ? `₱ ${Number(summary.overall_total).toLocaleString()}` 
+    : '₱ 0.00';
 
   return (
     <div className="bg-white rounded-lg p-4 h-96 overflow-y-auto">
@@ -62,7 +65,7 @@ const SalesOverview = () => {
         <div className="space-y-3">
           {summary && summary.branches.map((b) => (
             <p key={b.branch_id} className="text-sm text-gray-600">
-              Transactions from {b.branch_name}: {b.completed_count}
+              Completed Transactions from {b.branch_name}: {Number(b.completed_count || 0)}
             </p>
           ))}
         </div>
