@@ -99,9 +99,9 @@ export default function Login() {
       <div className="w-1/2 bg-gray-100 flex flex-col items-center justify-center p-12">
         <div className="w-full max-w-sm">
           {logo ? (
-            <img src={logo} alt="Profile" className="w-32 h-auto mx-auto mb-6" />
+            <img src={logo} alt="Profile" className="w-40 h-auto mx-auto mb-6" />
           ) : (
-            <User className="w-16 h-16 text-gray-500 mx-auto mb-6" />
+            <User className="w-20 h-20 text-gray-500 mx-auto mb-6" />
           )}
           <h2 className="text-center text-3xl font-bold mb-4 text-gray-800">Food Paradise</h2>
 
