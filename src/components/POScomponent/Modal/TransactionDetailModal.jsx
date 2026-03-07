@@ -209,13 +209,13 @@ export default function TransactionDetailModal({
             <div className="md:w-80 space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-2">Reason for void:</label>
-                <input
-                  type="text"
-                  className="w-full border rounded px-3 py-2"
+                <textarea
+                  className="w-full border rounded px-3 py-2 resize-none"
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   placeholder="Enter reason for voiding..."
                   autoComplete="off"
+                  rows="4"
                 />
               </div>
               <div>
