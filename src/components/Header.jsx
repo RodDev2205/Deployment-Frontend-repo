@@ -31,7 +31,7 @@ export default function Header({
   }, []);
 
   return (
-    <header className="flex items-center justify-between p-4 shadow-md bg-gradient-to-r from-emerald-600 to-emerald-700 text-white w-full">
+    <header className="flex items-center justify-between p-4 shadow-md bg-gradient-to-r from-green-700 to-green-800 text-white w-full">
       {/* App Title */}
       <h1 className="text-2xl font-semibold">{title}</h1>
 
