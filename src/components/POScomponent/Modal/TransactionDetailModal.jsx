@@ -55,12 +55,26 @@ export default function TransactionDetailModal({
 
   return (
     <div className="space-y-4 w-full max-w-5xl">
+      {/* Header with Close Button */}
+      <div className="flex justify-between items-start mb-4">
+        <div>
+          <h2 className="text-xl font-semibold">Transaction Details</h2>
+          <p className="text-sm text-gray-600">#{transaction.transaction_number}</p>
+        </div>
+        <button
+          onClick={onClose}
+          className="text-gray-500 hover:text-gray-700 text-2xl font-bold transition-colors"
+          title="Close modal"
+        >
+          ×
+        </button>
+      </div>
+
       {/* header info */}
       <div className="border-b pb-4">
         <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
           <div>
-            <h2 className="text-xl font-semibold">Transaction Details</h2>
-            <p className="text-sm text-gray-600">#{transaction.transaction_number}</p>
+            <p className="text-xs text-gray-600">Additional Info</p>
           </div>
           <div className="text-sm space-y-1 md:text-right">
             <p><span className="font-semibold">Cashier:</span> {transaction.cashier_name || "-"}</p>
