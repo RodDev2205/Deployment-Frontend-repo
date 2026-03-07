@@ -48,9 +48,13 @@ export default function POSCashier({ isCashier, isAdmin }) {
 
   const filteredItems = useMemo(() => {
     let result = items.filter(
-      (item) =>
-        (activeCategory === "All" || item.category_name === activeCategory) &&
-        item.product_name.toLowerCase().includes(searchTerm.toLowerCase())
+      (item) => {
+        const name = item.product_name ? item.product_name.toLowerCase() : "";
+        return (
+          (activeCategory === "All" || item.category_name === activeCategory) &&
+          name.includes(searchTerm.toLowerCase())
+        );
+      }
     );
 
     switch (sortOption) {

@@ -92,10 +92,13 @@ export default function Records () {
     };
 
     // filter + pagination
-    const filtered = records.filter(r =>
-        r.transaction_number.toLowerCase().includes(search.toLowerCase()) ||
-        formatTime(r.created_at).includes(search)
-    );
+    const filtered = records.filter(r => {
+        const txnNum = r.transaction_number ? r.transaction_number.toLowerCase() : "";
+        return (
+            txnNum.includes(search.toLowerCase()) ||
+            formatTime(r.created_at).includes(search)
+        );
+    });
     const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
     const start = (page - 1) * ITEMS_PER_PAGE;
     const currentRecords = filtered.slice(start, start + ITEMS_PER_PAGE);
