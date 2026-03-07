@@ -22,13 +22,7 @@ export default function TransactionDetailModal({
   const [voidError, setVoidError] = React.useState("");
   const [voidQuantities, setVoidQuantities] = React.useState({});
 
-  const [showRefundForm, setShowRefundForm] = React.useState(false);
-  const [refundType, setRefundType] = React.useState("full");
-  const [refundReason, setRefundReason] = React.useState("");
-  const [refundAdminPin, setRefundAdminPin] = React.useState("");
-  const [submittingRefund, setSubmittingRefund] = React.useState(false);
-  const [refundError, setRefundError] = React.useState("");
-  const [refundQuantities, setRefundQuantities] = React.useState({});
+
 
   const formatDate = (iso) => {
     try {
@@ -47,7 +41,7 @@ export default function TransactionDetailModal({
   const status = transaction.status;
   const createdAt = new Date(transaction.created_at);
   const minutesElapsed = (Date.now() - createdAt.getTime()) / 60000;
-  const voidAllowed = status === 'Completed' && minutesElapsed <= 30;
+  const voidAllowed = status === 'Completed' && minutesElapsed <= 60;
   const isVoidedOrRefunded = status === 'Voided' || status === 'Refunded';
 
   // compute remaining quantities after any prior partial refunds
@@ -275,211 +269,6 @@ export default function TransactionDetailModal({
             </div>
           </div>
         </div>
-      ) : showRefundForm ? (
-        <div className="space-y-4 mt-4 border-t pt-4 bg-orange-50 p-4 rounded-lg">
-          <h3 className="font-semibold text-orange-700 text-lg">REFUND TRANSACTION</h3>
-          
-          <div className="flex flex-col lg:flex-row gap-6">
-            {/* Left side - Refund options and items */}
-            <div className="flex-1 space-y-4">
-              {/* Refund Type Selection */}
-              <div>
-                <label className="block text-sm font-medium mb-2">Refund Type:</label>
-                <div className="space-y-2">
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      value="full"
-                      checked={refundType === "full"}
-                      onChange={(e) => {
-                        setRefundType(e.target.value);
-                        setRefundQuantities({});
-                      }}
-                      className="mr-2"
-                    />
-                    <span className="text-sm">Full Refund</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      value="partial"
-                      checked={refundType === "partial"}
-                      onChange={(e) => setRefundType(e.target.value)}
-                      className="mr-2"
-                    />
-                    <span className="text-sm">Partial Refund</span>
-                  </label>
-                </div>
-              </div>
-
-              {/* Full Refund Amount Display */}
-              {refundType === "full" && (
-                <div className="bg-white p-4 rounded border-2 border-orange-200">
-                  <p className="text-sm text-gray-600 mb-2">Refund Amount (Read-only):</p>
-                  <p className="text-2xl font-bold text-orange-600">₱ {(status === 'Partial Refunded' ? remainingTotalAmount : total).toFixed(2)}</p>
-                </div>
-              )}
-
-              {/* Partial Refund Items Selection */}
-              {refundType === "partial" && (
-                <div className="space-y-3">
-                  <label className="block text-sm font-medium">Select Items to Refund:</label>
-                  <div className="bg-white p-3 rounded border space-y-2 text-sm max-h-64 overflow-y-auto">
-                    {remainingItems.map((it) => {
-                      const qty = refundQuantities[it.menu_id] || 0;
-                      const maxQty = it.remaining;
-                      return (
-                        <div key={it.menu_id} className="flex items-center justify-between py-2">
-                          <span className="flex-1">{it.product_name || it.menu_id} (max: {it.remaining})</span>
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => setRefundQuantities(prev => ({
-                                ...prev,
-                                [it.menu_id]: Math.max(0, qty - 1)
-                              }))}
-                              className="bg-gray-300 px-3 py-1 rounded hover:bg-gray-400 text-sm"
-                              disabled={maxQty === 0}
-                            >
-                              −
-                            </button>
-                            <span className="w-8 text-center font-medium">{qty}</span>
-                            <button
-                              onClick={() => setRefundQuantities(prev => ({
-                                ...prev,
-                                [it.menu_id]: Math.min(maxQty, qty + 1)
-                              }))}
-                              className="bg-gray-300 px-3 py-1 rounded hover:bg-gray-400 text-sm"
-                              disabled={maxQty === 0}
-                            >
-                              +
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Right side - Form inputs and summary */}
-            <div className="lg:w-80 space-y-4">
-              {/* Refund Amount Summary for Partial */}
-              {refundType === "partial" && (
-                <div className="bg-orange-100 p-4 rounded border">
-                  <p className="text-sm font-semibold text-gray-700 mb-1">Calculated Refund Amount:</p>
-                  <p className="text-xl font-bold text-orange-600">₱ {(
-                    items.reduce((sum, it) => sum + ((refundQuantities[it.menu_id] || 0) * it.price), 0)
-                  ).toFixed(2)}</p>
-                </div>
-              )}
-
-              {/* Reason & PIN */}
-              <div>
-                <label className="block text-sm font-medium mb-2">Reason for Refund:</label>
-                <input
-                  type="text"
-                  className="w-full border rounded px-3 py-2"
-                  value={refundReason}
-                  onChange={(e) => setRefundReason(e.target.value)}
-                  placeholder="Enter reason for refund..."
-                  autoComplete="off"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Manager Approval (Admin PIN):</label>
-                <input
-                  type="password"
-                  className="w-full border rounded px-3 py-2"
-                  value={refundAdminPin}
-                  onChange={(e) => setRefundAdminPin(e.target.value)}
-                  placeholder="Enter admin PIN"
-                  autoComplete="off"
-                />
-              </div>
-
-              {/* Warning */}
-              <div className="bg-yellow-50 border border-yellow-200 p-3 rounded text-xs">
-                <p className="font-semibold text-yellow-800 mb-1">⚠ WARNING</p>
-                <p className="text-yellow-700">This action will restore inventory and create a permanent refund record. This action cannot be undone.</p>
-              </div>
-
-              {refundError && <p className="text-red-500 text-sm bg-red-100 p-2 rounded">{refundError}</p>}
-
-              <div className="flex gap-3 pt-2">
-                <button
-                  className="flex-1 bg-gray-300 hover:bg-gray-400 font-bold py-3 rounded-lg"
-                  onClick={() => setShowRefundForm(false)}
-                >
-                  Back
-                </button>
-                <button
-                  disabled={submittingRefund}
-                  className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-lg disabled:opacity-50"
-                  onClick={async () => {
-                    if (!refundReason.trim() || !refundAdminPin.trim()) {
-                      setRefundError("Reason and PIN are required");
-                      return;
-                    }
-                    if (refundType === "partial") {
-                      const hasSelection = Object.values(refundQuantities).some(q => q > 0);
-                      if (!hasSelection) {
-                        setRefundError("Please select at least one item to refund");
-                        return;
-                      }
-                    }
-                    setSubmittingRefund(true);
-                    try {
-                      const token = localStorage.getItem("token");
-                      // build payload: if transaction already partially refunded and user selects Full,
-                      // treat as partial refund for remaining items to avoid double-refunding.
-                      let payloadRefundType = refundType;
-                      let payloadRefundItems = null;
-
-                      if (refundType === 'partial') {
-                        payloadRefundItems = Object.entries(refundQuantities)
-                          .filter(([_, qty]) => qty > 0)
-                          .map(([menuId, qty]) => ({ menu_id: parseInt(menuId), refund_qty: qty }));
-                      } else if (refundType === 'full' && status === 'Partial Refunded') {
-                        // convert to partial using remaining quantities
-                        payloadRefundType = 'partial';
-                        payloadRefundItems = remainingItems
-                          .map(it => ({ menu_id: it.menu_id, refund_qty: it.remaining }))
-                          .filter(it => it.refund_qty > 0);
-                      }
-
-                      const res = await fetch(`${API_BASE_URL}/api/pos/refund`, {
-                        method: "POST",
-                        headers: {
-                          "Content-Type": "application/json",
-                          Authorization: `Bearer ${token}`,
-                        },
-                        body: JSON.stringify({
-                          transaction_id: transaction.transaction_id,
-                          refund_type: payloadRefundType,
-                          refund_items: payloadRefundItems,
-                          reason: refundReason,
-                          admin_pin: refundAdminPin,
-                        }),
-                      });
-                      const data = await res.json();
-                      if (!res.ok) throw new Error(data.message || "Refund failed");
-                      const newStatus = data.status || 'Refunded';
-                      onRefund && onRefund(transaction.transaction_id, newStatus);
-                      onClose();
-                    } catch (err) {
-                      setRefundError(err.message);
-                    } finally {
-                      setSubmittingRefund(false);
-                    }
-                  }}
-                >
-                  {submittingRefund ? 'Processing...' : 'Confirm Refund'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
       ) : (
         <div className="flex flex-col sm:flex-row gap-4 mt-6 pt-4 border-t">
           {/* hide actions for voided/refunded or when nothing left to refund */}
@@ -488,38 +277,21 @@ export default function TransactionDetailModal({
               <p className="text-sm text-gray-600 font-medium">No actions available for this transaction.</p>
             </div>
           ) : (
-            <div className="flex flex-col sm:flex-row gap-4 w-full">
+            <div className="w-full">
               {voidAllowed ? (
                 <button
-                  className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-lg text-base transition-colors"
+                  className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-lg text-base transition-colors"
                   onClick={() => { setShowVoidForm(true); setVoidError(""); }}
                 >
                   Void Transaction
                 </button>
               ) : (
                 <button
-                  className="flex-1 bg-red-200 text-white font-bold py-4 rounded-lg text-base opacity-50 cursor-not-allowed"
+                  className="w-full bg-red-200 text-white font-bold py-4 rounded-lg text-base opacity-50 cursor-not-allowed"
                   disabled
-                  title={status === 'Completed' ? 'Void not allowed after 30 minutes' : 'Void not available'}
+                  title={status === 'Completed' ? 'Void not allowed after 1 hour' : 'Void not available'}
                 >
                   Void Transaction
-                </button>
-              )}
-
-              {/* Refund is allowed for Completed or Partial Refunded when there are remaining items */}
-              {(status === 'Completed' || status === 'Partial Refunded') && remainingTotalCount > 0 ? (
-                <button
-                  className="flex-1 bg-orange-400 hover:bg-orange-500 text-white font-bold py-4 rounded-lg text-base transition-colors"
-                  onClick={() => { setShowRefundForm(true); setRefundError(""); setRefundType('full'); setRefundQuantities({}); }}
-                >
-                  Refund Transaction
-                </button>
-              ) : (
-                <button
-                  className="flex-1 bg-orange-200 text-white font-bold py-4 rounded-lg text-base opacity-50 cursor-not-allowed"
-                  disabled
-                >
-                  Refund Transaction
                 </button>
               )}
             </div>

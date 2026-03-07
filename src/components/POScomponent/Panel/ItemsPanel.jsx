@@ -18,7 +18,7 @@ export default function ItemsPanel({
   return (
     <div className="flex-1 bg-white rounded-xl overflow-hidden shadow-sm border border-gray-200 flex flex-col">
       {/* Header */}
-      <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white px-6 py-4 border-b border-emerald-800">
+      <div className="bg-gradient-to-r from-green-700 to-green-800 text-white px-6 py-4 border-b border-emerald-800">
         <h2 className="text-2xl font-bold">Menu Items</h2>
         <p className="text-emerald-100 text-sm">Select items to add to cart</p>
       </div>
@@ -66,7 +66,7 @@ export default function ItemsPanel({
                 onClick={() => setActiveCategory(cat)}
                 className={`px-3 py-1 rounded-full font-medium transition-all text-sm ${
                   activeCategory === cat
-                    ? "bg-emerald-600 text-white shadow-md"
+                    ? "bg-green-700 text-white shadow-md"
                     : "bg-gray-100 text-gray-700 border border-gray-300 hover:border-emerald-500 hover:text-emerald-600"
                 }`}
               >

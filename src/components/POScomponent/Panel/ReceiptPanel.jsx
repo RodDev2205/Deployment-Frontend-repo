@@ -19,7 +19,7 @@ export default function ReceiptPanel({
   return (
     <div className="w-96 bg-white rounded-xl overflow-hidden shadow-sm border border-gray-200 flex flex-col">
       {/* Header */}
-      <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white px-6 py-4 border-b border-emerald-800">
+      <div className="bg-gradient-to-r from-green-700 to-green-800 text-white px-6 py-4 border-b border-emerald-800">
         <div className="flex items-center gap-2 mb-2">
           <ShoppingCart className="w-5 h-5" />
           <h2 className="font-bold text-xl">Order</h2>
@@ -51,7 +51,7 @@ export default function ReceiptPanel({
                 <div className="font-semibold text-gray-900 text-xs">{item.item}</div>
                 <div className="text-xs text-gray-600">{item.qty}x @ ₱{item.price.toFixed(2)}</div>
               </div>
-              <div className="font-bold text-emerald-600 text-right min-w-max">
+              <div className="font-bold text-green-700 text-right min-w-max">
                 ₱{(item.qty * item.price).toFixed(2)}
               </div>
             </div>
@@ -71,7 +71,7 @@ export default function ReceiptPanel({
         </div>
         <div className="flex justify-between items-center pt-2 border-t border-gray-200">
           <span className="font-bold text-gray-900">Total</span>
-          <div className="bg-emerald-600 text-white rounded-lg px-3 py-2 font-bold text-lg">
+          <div className="bg-green-700 text-white rounded-lg px-3 py-2 font-bold text-lg">
             ₱{totalAmount.toFixed(2)}
           </div>
         </div>
@@ -83,7 +83,7 @@ export default function ReceiptPanel({
           className={`w-full font-bold py-2 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 text-sm ${
             cart.length === 0
               ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-              : "bg-emerald-600 hover:bg-emerald-700 text-white active:scale-95"
+              : "bg-green-700 hover:bg-green-800 text-white active:scale-95"
           }`}
           onClick={handleCheckout}
           disabled={cart.length === 0}

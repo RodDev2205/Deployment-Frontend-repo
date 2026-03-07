@@ -374,16 +374,16 @@ export default function ChatRoom() {
 
       {/* Image Modal */}
       {selectedImage && (
-        <div className="fixed inset-0 bg-grey-500 bg-opacity-75 flex items-center justify-center z-50">
-          <div className="relative max-w-4xl max-h-full p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50" onClick={() => setSelectedImage(null)}>
+          <div className="relative w-full h-full flex items-center justify-center overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <img
               src={selectedImage}
               alt="Full size"
-              className="max-w-full max-h-full object-contain"
+              className="max-w-[95vw] max-h-[95vh] object-contain"
             />
             <button
               onClick={() => setSelectedImage(null)}
-              className="absolute top-4 right-4 bg-white text-black rounded-full w-8 h-8 flex items-center justify-center font-bold hover:bg-gray-200"
+              className="absolute top-4 right-4 text-white text-2xl hover:text-gray-300 transition-colors"
             >
               ×
             </button>

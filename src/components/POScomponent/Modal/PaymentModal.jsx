@@ -4,7 +4,6 @@ import { useAlert } from "@/context/AlertContext";
 export default function PaymentModal({ totalAmount = 0, onConfirm, onClose }) {
   const { error: alertError } = useAlert();
 
-  const [paymentMethod, setPaymentMethod] = useState("cash");
   const [amountPaid, setAmountPaid] = useState("");
   const [discountType, setDiscountType] = useState("none");
   const [discountValue, setDiscountValue] = useState("");
@@ -29,11 +28,6 @@ export default function PaymentModal({ totalAmount = 0, onConfirm, onClose }) {
   const isValidPayment = safeAmountPaid >= finalAmount && finalAmount > 0;
 
   const handleConfirm = () => {
-    if (!paymentMethod) {
-      alertError("Payment", "Please select a payment method.");
-      return;
-    }
-
     if (finalAmount <= 0) {
       alertError("Payment", "Invalid total amount.");
       return;
@@ -45,7 +39,7 @@ export default function PaymentModal({ totalAmount = 0, onConfirm, onClose }) {
     }
 
     onConfirm({
-      paymentMethod,
+      paymentMethod: "cash",
       amountPaid: safeAmountPaid,
       finalAmount,
       change,
@@ -134,29 +128,6 @@ export default function PaymentModal({ totalAmount = 0, onConfirm, onClose }) {
                 Discount Amount: ₱{discountAmount.toFixed(2)}
               </p>
             )}
-          </div>
-
-          {/* Payment Method */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-3">
-              Payment Method
-            </label>
-
-            <div className="grid grid-cols-3 gap-2">
-              {["cash", "gcash", "card"].map((method) => (
-                <button
-                  key={method}
-                  onClick={() => setPaymentMethod(method)}
-                  className={`py-2 px-3 rounded text-sm font-medium transition-all ${
-                    paymentMethod === method
-                      ? "bg-green-600 text-white"
-                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                  }`}
-                >
-                  {method.charAt(0).toUpperCase() + method.slice(1)}
-                </button>
-              ))}
-            </div>
           </div>
 
         </div>
