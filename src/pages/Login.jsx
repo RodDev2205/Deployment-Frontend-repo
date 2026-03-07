@@ -98,7 +98,7 @@ export default function Login() {
       {/* Right Login Panel */}
       <div className="w-1/2 bg-gray-100 flex flex-col items-center justify-center p-12">
         <div className="w-full max-w-sm">
-          <div className="w-32 h-32 bg-gray-300 rounded-full mx-auto mb-6 flex items-center justify-center overflow-hidden">
+          <div className="w-32 h-32 bg-gray-300 mx-auto mb-6 flex items-center justify-center overflow-hidden">
             {logo ? (
               <img src={logo} alt="Profile" className="w-full h-full object-cover" />
             ) : (
