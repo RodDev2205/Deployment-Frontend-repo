@@ -374,7 +374,7 @@ export default function ChatRoom() {
 
       {/* Image Modal */}
       {selectedImage && (
-        <div className="fixed inset-0 bg-black-500 bg-opacity-75 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-grey-500 bg-opacity-75 flex items-center justify-center z-50">
           <div className="relative max-w-4xl max-h-full p-4">
             <img
               src={selectedImage}
