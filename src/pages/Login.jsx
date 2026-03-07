@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { User, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import logo from '../assets/logo1.png';
+import logo from '../assets/logo3.png';
 import API_BASE_URL from '../config/api';
 
 export default function Login() {
@@ -98,11 +98,13 @@ export default function Login() {
       {/* Right Login Panel */}
       <div className="w-1/2 bg-gray-100 flex flex-col items-center justify-center p-12">
         <div className="w-full max-w-sm">
+          <div className="w-32 h-32 mx-auto mb-6 flex items-center justify-center overflow-hidden">
             {logo ? (
               <img src={logo} alt="Profile" className="w-full h-full object-cover" />
             ) : (
               <User className="w-16 h-16 text-gray-500" />
             )}
+          </div>
           <h2 className="text-center text-3xl font-bold mb-4 text-gray-800">Food Paradise</h2>
 
           <form onSubmit={handleLogin} className="space-y-4">
