@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { User, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { logo } from '../assets/logo1.png';
+import logo from '../assets/logo1.png';
 import API_BASE_URL from '../config/api';
 
 export default function Login() {
