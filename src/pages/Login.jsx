@@ -103,8 +103,6 @@ export default function Login() {
           ) : (
             <User className="w-20 h-20 text-gray-500 mx-auto mb-6" />
           )}
-          <h2 className="text-center text-3xl font-bold mb-4 text-gray-800">Food Paradise</h2>
-
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="relative">
               <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-4 h-4" />
