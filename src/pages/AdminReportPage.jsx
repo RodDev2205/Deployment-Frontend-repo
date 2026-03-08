@@ -136,10 +136,30 @@ export default function AdminReportsPage() {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       })}`,
+      subtitle: "Net Sales (Gross - Voided)"
     },
     {
-      title: "Total Transactions",
-      value: todaySales?.transaction_count || 0,
+      title: "Gross Sales",
+      value: `₱${(todaySales?.gross_sales || 0).toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`,
+      subtitle: "All items (including voided)"
+    },
+    {
+      title: "Voided Transactions",
+      value: todaySales?.voided_count || 0,
+      subtitle: "Status: Voided"
+    },
+    {
+      title: "Partial Voids",
+      value: todaySales?.partial_voided_count || 0,
+      subtitle: "Status: Partial Voided"
+    },
+    {
+      title: "Staff Who Voided",
+      value: todaySales?.staff_who_voided_count || 0,
+      subtitle: "Unique staff members"
     },
     {
       title: "Average Order Value",
@@ -252,6 +272,7 @@ export default function AdminReportsPage() {
           >
             <p className="text-sm text-gray-500">{item.title}</p>
             <h2 className="text-2xl font-bold mt-2">{item.value}</h2>
+            {item.subtitle && <p className="text-xs text-gray-400 mt-1">{item.subtitle}</p>}
           </div>
         ))}
       </div>
