@@ -81,12 +81,12 @@ function AdminDashboardPage() {
   const adminNavItems = [
     { name: 'Dashboard', icon: LayoutDashboard, path: '/admin' },
     { name: 'POS', icon: ShoppingCart, path: '/admin/pos' },
+    { name: 'Transactions', icon: CreditCard, path: '/admin/transactions' },
     { name: 'Chat Room', icon: MessageCircleMore, path: '/admin/chat-room' },
     { name: 'Menu', icon: BookOpen, path: '/admin/menu' },
     { name: 'Inventory', icon: Warehouse, path: '/admin/inventory' },
     { name: 'Cashiers', icon: Users, path: '/admin/cashiers' },
     { name: 'Reports', icon: ChartNoAxesCombined, path: '/admin/reports' },
-    { name: 'Transactions', icon: CreditCard, path: '/admin/transactions' },
     { name: 'Logs', icon: History, path: '/admin/logs' },
     { name: 'Settings', icon: Settings, path: '/admin/settings' },
   ];
