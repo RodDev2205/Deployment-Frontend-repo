@@ -155,8 +155,9 @@ const getTypeIcon = (type) => {
 const exportToPDF = async (logs) => {
   try {
     const { jsPDF } = await import('jspdf');
-    // plugin attaches itself on import side-effect
-    await import('jspdf-autotable');
+    // load plugin function explicitly
+    const autoTableModule = await import('jspdf-autotable');
+    const autoTable = autoTableModule.default || autoTableModule;
     
     const doc = new jsPDF();
 
@@ -178,26 +179,30 @@ const exportToPDF = async (logs) => {
       log.severity || 'Info'
     ]);
 
-    // Add table (autoTable should now be available)
-    doc.autoTable({
-      head: [['Timestamp', 'Type', 'User/Source', 'Action', 'Severity']],
-      body: tableData,
-      startY: 45,
-      styles: {
-        fontSize: 8,
-        cellPadding: 3,
-      },
-      headStyles: {
-        fillColor: [27, 94, 32], // #1B5E20
-        textColor: 255,
-        fontSize: 9,
-        fontStyle: 'bold',
-      },
-      alternateRowStyles: {
-        fillColor: [245, 245, 245],
-      },
-      margin: { top: 45 },
-    });
+    // Add table using autoTable plugin function directly
+    if (typeof autoTable === 'function') {
+      autoTable(doc, {
+        head: [['Timestamp', 'Type', 'User/Source', 'Action', 'Severity']],
+        body: tableData,
+        startY: 45,
+        styles: {
+          fontSize: 8,
+          cellPadding: 3,
+        },
+        headStyles: {
+          fillColor: [27, 94, 32], // #1B5E20
+          textColor: 255,
+          fontSize: 9,
+          fontStyle: 'bold',
+        },
+        alternateRowStyles: {
+          fillColor: [245, 245, 245],
+        },
+        margin: { top: 45 },
+      });
+    } else {
+      console.error('autoTable plugin not loaded');
+    }
 
     // Save the PDF
     const fileName = `activity_logs_${new Date().toISOString().split('T')[0]}.pdf`;
