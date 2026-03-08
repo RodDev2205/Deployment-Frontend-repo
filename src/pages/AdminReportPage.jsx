@@ -28,6 +28,7 @@ export default function AdminReportsPage() {
   const [error, setError] = useState(null);
   const [paymentData, setPaymentData] = useState([]); // cash/gcash breakdown
   const [topProducts, setTopProducts] = useState([]); // product ranking
+  const [voidTracking, setVoidTracking] = useState([]); // void tracking data
 
   useEffect(() => {
     const fetchSalesData = async () => {
@@ -86,6 +87,11 @@ export default function AdminReportsPage() {
         const topData = await fetch(
           `${API_BASE_URL}/api/sales-admin/top-products?startDate=${startDate}&endDate=${endDate}`,
           { headers: { Authorization: `Bearer ${token}` } }
+        ).then(r => r.ok ? r.json() : []);
+
+        const voidData = await fetch(
+          `${API_BASE_URL}/api/sales-admin/void-tracking?startDate=${startDate}&endDate=${endDate}`,
+          { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }
         ).then(r => r.ok ? r.json() : []);
 
         // generate a complete list of period keys to fill gaps
@@ -151,6 +157,7 @@ export default function AdminReportsPage() {
         }));
         setPaymentData(pie);
         setTopProducts(topData);
+        setVoidTracking(voidData);
         setLoading(false);
       } catch (err) {
         console.error("Error fetching sales data:", err);
@@ -227,6 +234,10 @@ export default function AdminReportsPage() {
     csv += "\nTop Selling Products\nProduct,Quantity Sold,Total Amount\n";
     topProducts.forEach(p => {
       csv += `${p.product_name || ''},${p.total_qty || 0},${p.total_amount || 0}\n`;
+    });
+    csv += "\nVoid Tracking\nTransaction,Cashier,Item,Amount,Type,Reason\n";
+    voidTracking.forEach(v => {
+      csv += `${v.transaction_number || ''},${v.cashier || ''},${v.item || ''},${v.amount || 0},${v.type || ''},${v.reason || ''}\n`;
     });
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -399,6 +410,35 @@ export default function AdminReportsPage() {
                 <td className="p-2 border-b">{prod.product_name || 'Unknown'}</td>
                 <td className="p-2 border-b">{prod.total_qty}</td>
                 <td className="p-2 border-b">₱{Number(prod.total_amount).toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Void Tracking Table */}
+      <div className="bg-white rounded-2xl shadow-md p-6">
+        <h2 className="text-lg font-semibold mb-4">Void Tracking</h2>
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr>
+              <th className="p-2 border-b">Transaction</th>
+              <th className="p-2 border-b">Cashier</th>
+              <th className="p-2 border-b">Item</th>
+              <th className="p-2 border-b">Amount</th>
+              <th className="p-2 border-b">Type</th>
+              <th className="p-2 border-b">Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            {voidTracking.map((item, idx) => (
+              <tr key={idx} className="hover:bg-gray-100">
+                <td className="p-2 border-b">{item.transaction_number}</td>
+                <td className="p-2 border-b">{item.cashier}</td>
+                <td className="p-2 border-b">{item.item}</td>
+                <td className="p-2 border-b">₱{Number(item.amount).toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+                <td className="p-2 border-b">{item.type}</td>
+                <td className="p-2 border-b">{item.reason}</td>
               </tr>
             ))}
           </tbody>
