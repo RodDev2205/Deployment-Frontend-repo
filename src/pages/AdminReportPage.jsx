@@ -43,16 +43,21 @@ export default function AdminReportsPage() {
         
         // Fetch sales for selected period (last 7 calendar units)
         const today = new Date();
-        // last 7 calendar days inclusive: start = today - 6, end = today
-        const start = new Date();
-        start.setDate(today.getDate() - 6);
-        // format in local YYYY-MM-DD to avoid UTC shift
+        // compute startDate based on period (7 units back)
+        const start = new Date(today);
         const format = (d) => {
           const y = d.getFullYear();
           const m = String(d.getMonth() + 1).padStart(2, '0');
           const dd = String(d.getDate()).padStart(2, '0');
           return `${y}-${m}-${dd}`;
         };
+        if (period === 'daily') {
+          start.setDate(today.getDate() - 6);
+        } else if (period === 'weekly') {
+          start.setDate(today.getDate() - 6 * 7);
+        } else if (period === 'monthly') {
+          start.setMonth(today.getMonth() - 6);
+        }
         const startDate = format(start);
         const endDate = format(today);
 
@@ -82,40 +87,66 @@ export default function AdminReportsPage() {
           { headers: { Authorization: `Bearer ${token}` } }
         ).then(r => r.ok ? r.json() : []);
 
-        // Transform data for chart (group by period_key)
-        const chartData = salesData.map(item => {
-          let label = item.period_key;
-          if (period === 'daily') {
-            label = new Date(item.period_key).toLocaleDateString('en-US', { weekday: 'short' });
-          } else if (period === 'weekly') {
-            const [yearWeek] = item.period_key.split('-');
-            // week number is after hyphen
-            const wk = item.period_key.split('-')[1];
-            label = `W${wk}`;
-          } else if (period === 'monthly') {
-            const parts = item.period_key.split('-');
-            label = `${parts[0]}-${parts[1].padStart(2,'0')}`;
+        // generate a complete list of period keys to fill gaps
+        const generateKeys = () => {
+          const keys = [];
+          const temp = new Date(startDate);
+          for (let i = 0; i < 7; i++) {
+            if (period === 'daily') {
+              keys.push(format(temp));
+              temp.setDate(temp.getDate() + 1);
+            } else if (period === 'weekly') {
+              // ISO week label
+              const year = temp.getFullYear();
+              const wk = String(getWeekNumber(temp)).padStart(2,'0');
+              keys.push(`${year}-${wk}`);
+              temp.setDate(temp.getDate() + 7);
+            } else if (period === 'monthly') {
+              const year = temp.getFullYear();
+              const mon = String(temp.getMonth()+1).padStart(2,'0');
+              keys.push(`${year}-${mon}`);
+              temp.setMonth(temp.getMonth() + 1);
+            }
           }
-          return { date: label, sales: Number(item.total_sales || 0) };
+          return keys;
+        };
+
+        const weekNumberCache = {};
+        const getWeekNumber = (d) => {
+          const date = new Date(d.getTime());
+          date.setHours(0,0,0,0);
+          // Thursday-based ISO week
+          date.setDate(date.getDate() + 3 - ((date.getDay() + 6) % 7));
+          const week1 = new Date(date.getFullYear(),0,4);
+          return 1 + Math.round(((date - week1) / 86400000 - 3 + ((week1.getDay()+6)%7)) / 7);
+        };
+
+        // Transform data for chart (group by period_key)
+        const rawMap = {};
+        salesData.forEach(item => {
+          rawMap[item.period_key] = Number(item.total_sales || 0);
         });
 
-        setDailySales(chartData.reverse());
-        setTodaySales(todayData);
-        // convert payment counts to percentages
-        // ensure both cash and gcash keys exist, normalize to lowercase
-        const normalized = payData.map(p => ({
-          payment_method: p.payment_method.toLowerCase(),
-          count: p.count,
-        }));
-        const methods = ['cash','gcash'];
-        const filled = methods.map(m => {
-          const row = normalized.find(r => r.payment_method === m);
-          return { payment_method: m, count: row ? row.count : 0 };
+        const filled = generateKeys().map(key => {
+          let label = key;
+          if (period === 'daily') {
+            label = new Date(key).toLocaleDateString('en-US', { weekday: 'short' });
+          } else if (period === 'weekly') {
+            const wk = key.split('-')[1];
+            label = `W${wk}`;
+          } else if (period === 'monthly') {
+            const parts = key.split('-');
+            label = `${parts[0]}-${parts[1]}`;
+          }
+          return { date: label, sales: rawMap[key] || 0 };
         });
-        // use raw counts for the pie; recharts will compute percentages
-        const pie = filled.map(p => ({
-          name: p.payment_method,
-          value: p.count,
+
+        setDailySales(filled.reverse());
+        setTodaySales(todayData);
+        // status breakdown (Completed / Voided / Partial Voided)
+        const pie = payData.map(p => ({
+          name: p.status,
+          value: p.cnt
         }));
         setPaymentData(pie);
         setTopProducts(topData);
@@ -144,7 +175,7 @@ export default function AdminReportsPage() {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       })}`,
-      subtitle: "All items (including voided)"
+      subtitle: "All items ordered"
     },
     {
       title: "Voided Transactions",
@@ -330,7 +361,12 @@ export default function AdminReportsPage() {
                 {paymentData.map((entry, index) => (
                   <Cell
                     key={`cell-${index}`}
-                    fill={entry.name === 'cash' ? '#8884d8' : '#82ca9d'}
+                    fill={
+                      entry.name === 'Completed' ? '#8884d8' :
+                      entry.name === 'Voided' ? '#e74c3c' :
+                      entry.name === 'Partial Voided' ? '#f39c12' :
+                      '#ccc'
+                    }
                   />
                 ))}
               </Pie>
