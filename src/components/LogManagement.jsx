@@ -21,7 +21,7 @@ const LogManagement = () => {
           return;
         }
 
-        const response = await fetch(`${API_BASE_URL}/api/activity-logs/login-logs`, {
+        const response = await fetch(`${API_BASE_URL}/api/activity-logs`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -34,6 +34,10 @@ const LogManagement = () => {
 
         const data = await response.json();
         setLogs(data);
+
+        // update log types dynamically
+        const types = new Set(data.map(l => l.activity_type || l.type));
+        setLogTypes(['All', ...types]);
       } catch (err) {
         console.error('Error fetching logs:', err);
         setError(err.message);
@@ -45,11 +49,13 @@ const LogManagement = () => {
     fetchLogs();
   }, []);
 
-  const logTypes = ["All", "Security"];
+  // dynamic log type filters
+  const [logTypes, setLogTypes] = useState(["All", "Security"]);
 
   // --- Filtering Logic ---
   const filteredLogs = logs.filter(log => {
-    const typeMatch = activeType === 'All' || log.type === activeType;
+    const logType = log.activity_type || log.type;
+    const typeMatch = activeType === 'All' || logType === activeType;
     const searchMatch = log.details?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                         log.user?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                         log.action?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -95,9 +101,16 @@ const getSeverityStyle = (severity) => {
 const getTypeIcon = (type) => {
   switch (type) {
     case 'Security':
+    case 'login':
+    case 'login_failed':
       return <Lock className="w-4 h-4 mr-2 text-red-600" />;
-    case 'Inventory':
+    case 'menu_item_created':
+    case 'menu_item_updated':
+    case 'menu_item_deleted':
       return <Package className="w-4 h-4 mr-2 text-amber-600" />;
+    case 'inventory_adjustment':
+    case 'inventory_add':
+      return <Package className="w-4 h-4 mr-2 text-green-600" />;
     case 'System':
       return <Server className="w-4 h-4 mr-2 text-blue-600" />;
     default:
@@ -199,15 +212,15 @@ const getTypeIcon = (type) => {
                 <tr key={log.log_id} className="hover:bg-gray-50 transition">
                   <td className="px-6 py-3 whitespace-nowrap text-sm font-mono text-gray-600">{formatTimestamp(log.timestamp)}</td>
                   <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-800 font-semibold flex items-center">
-                      {getTypeIcon(log.type)}
-                      {log.type}
+                      {getTypeIcon(log.activity_type || log.type)}
+                      {log.activity_type || log.type}
                   </td>
                   <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-500">{log.user}</td>
                   <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-700">{log.action}</td>
                   <td className="px-6 py-3 text-sm text-gray-500 max-w-sm truncate">{log.details}</td>
                   <td className="px-6 py-3 whitespace-nowrap">
-                    <span className={`px-3 py-1 text-xs font-semibold rounded-full border ${getSeverityStyle(log.severity)}`}>
-                      {log.severity}
+                      <span className={`px-3 py-1 text-xs font-semibold rounded-full border ${getSeverityStyle(log.severity || 'Info')}`}>
+                      {(log.severity || 'Info')}
                     </span>
                   </td>
                 </tr>
