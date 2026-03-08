@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { History, Search, Download, Server, Package, Lock } from 'lucide-react';
+import { History, Search, Download, Server, Package, Lock, User, UserCheck, UserX, Key } from 'lucide-react';
 import API_BASE_URL from '../config/api';
 
 // --- Main Log Management Component ---
@@ -111,6 +111,16 @@ const getTypeIcon = (type) => {
     case 'inventory_adjustment':
     case 'inventory_add':
       return <Package className="w-4 h-4 mr-2 text-green-600" />;
+    case 'cashier_created':
+      return <User className="w-4 h-4 mr-2 text-blue-600" />;
+    case 'cashier_updated':
+      return <User className="w-4 h-4 mr-2 text-purple-600" />;
+    case 'cashier_password_reset':
+      return <Key className="w-4 h-4 mr-2 text-orange-600" />;
+    case 'cashier_activated':
+      return <UserCheck className="w-4 h-4 mr-2 text-green-600" />;
+    case 'cashier_deactivated':
+      return <UserX className="w-4 h-4 mr-2 text-red-600" />;
     case 'System':
       return <Server className="w-4 h-4 mr-2 text-blue-600" />;
     default:
