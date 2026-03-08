@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { History, Search, Download, Server, Package, Lock, User, UserCheck, UserX, Key, ShoppingCart, XCircle, RotateCcw } from 'lucide-react';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
+
+// initialize plugin so doc.autoTable becomes available
+if (autoTable && typeof autoTable === 'function') {
+  autoTable(jsPDF);
+}
 import API_BASE_URL from '../config/api';
 
 // --- Main Log Management Component ---
