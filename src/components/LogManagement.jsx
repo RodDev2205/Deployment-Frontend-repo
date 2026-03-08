@@ -1,12 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { History, Search, Download, Server, Package, Lock, User, UserCheck, UserX, Key, ShoppingCart, XCircle, RotateCcw } from 'lucide-react';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
-
-// initialize plugin so doc.autoTable becomes available
-if (autoTable && typeof autoTable === 'function') {
-  autoTable(jsPDF);
-}
+// jsPDF and its autotable plugin will be dynamically loaded in exportToPDF
+// to avoid initialization issues with bundlers and ensure plugin attaches correctly.
 import API_BASE_URL from '../config/api';
 
 // --- Main Log Management Component ---
@@ -156,52 +151,61 @@ const getTypeIcon = (type) => {
   }
 };
 
-// PDF Export Function
-const exportToPDF = (logs) => {
-  const doc = new jsPDF();
+// PDF Export Function (dynamic import ensures correct plugin initialization)
+const exportToPDF = async (logs) => {
+  try {
+    const { jsPDF } = await import('jspdf');
+    // plugin attaches itself on import side-effect
+    await import('jspdf-autotable');
+    
+    const doc = new jsPDF();
 
-  // Add title
-  doc.setFontSize(20);
-  doc.text('System Activity Logs Report', 14, 22);
+    // Add title
+    doc.setFontSize(20);
+    doc.text('System Activity Logs Report', 14, 22);
 
-  // Add generation timestamp
-  doc.setFontSize(10);
-  doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 32);
-  doc.text(`Total Records: ${logs.length}`, 14, 38);
+    // Add generation timestamp
+    doc.setFontSize(10);
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 32);
+    doc.text(`Total Records: ${logs.length}`, 14, 38);
 
-  // Prepare table data
-  const tableData = logs.map(log => [
-    formatTimestamp(log.timestamp),
-    log.activity_type || log.type || 'N/A',
-    log.user || 'N/A',
-    log.action || log.description || 'N/A',
-    log.severity || 'Info'
-  ]);
+    // Prepare table data
+    const tableData = logs.map(log => [
+      formatTimestamp(log.timestamp),
+      log.activity_type || log.type || 'N/A',
+      log.user || 'N/A',
+      log.action || log.description || 'N/A',
+      log.severity || 'Info'
+    ]);
 
-  // Add table
-  doc.autoTable({
-    head: [['Timestamp', 'Type', 'User/Source', 'Action', 'Severity']],
-    body: tableData,
-    startY: 45,
-    styles: {
-      fontSize: 8,
-      cellPadding: 3,
-    },
-    headStyles: {
-      fillColor: [27, 94, 32], // #1B5E20
-      textColor: 255,
-      fontSize: 9,
-      fontStyle: 'bold',
-    },
-    alternateRowStyles: {
-      fillColor: [245, 245, 245],
-    },
-    margin: { top: 45 },
-  });
+    // Add table (autoTable should now be available)
+    doc.autoTable({
+      head: [['Timestamp', 'Type', 'User/Source', 'Action', 'Severity']],
+      body: tableData,
+      startY: 45,
+      styles: {
+        fontSize: 8,
+        cellPadding: 3,
+      },
+      headStyles: {
+        fillColor: [27, 94, 32], // #1B5E20
+        textColor: 255,
+        fontSize: 9,
+        fontStyle: 'bold',
+      },
+      alternateRowStyles: {
+        fillColor: [245, 245, 245],
+      },
+      margin: { top: 45 },
+    });
 
-  // Save the PDF
-  const fileName = `activity_logs_${new Date().toISOString().split('T')[0]}.pdf`;
-  doc.save(fileName);
+    // Save the PDF
+    const fileName = `activity_logs_${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(fileName);
+  } catch (err) {
+    console.error('PDF export failed:', err);
+    alert('Failed to generate PDF. See console for details.');
+  }
 };
 
   return (
