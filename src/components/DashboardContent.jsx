@@ -12,37 +12,44 @@ const StatCard = ({ title, value, icon: Icon, bgColor, textColor }) => (
   </div>
 );
 
-const BarChartPlaceholder = () => (
-  <div className="h-64 bg-gray-50 p-4 rounded-lg shadow flex items-end justify-around">
-    {[...Array(7)].map((_, i) => (
-      <div 
-        key={i} 
-        className={`w-8 rounded-t-lg transition-all duration-500 ${i % 2 === 0 ? 'bg-green-600' : 'bg-blue-500'}`} 
-        style={{ height: `${Math.floor(Math.random() * (90 - 30 + 1) + 30)}%` }} 
-      />
-    ))}
-  </div>
-);
+const TopMenuSalesChart = ({ menuSales }) => {
+  if (!menuSales || menuSales.length === 0) {
+    return (
+      <div className="h-64 bg-gray-50 p-4 rounded-lg shadow flex items-center justify-center">
+        <p className="text-gray-500">Loading menu sales data...</p>
+      </div>
+    );
+  }
 
-const LineChartPlaceholder = () => (
-  <div className="h-64 bg-gray-50 p-4 rounded-lg shadow relative">
-    <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-      <polyline 
-        fill="none" 
-        stroke="rgb(22, 163, 74)" 
-        strokeWidth="2" 
-        points="0,80 15,65 30,50 45,75 60,40 75,55 90,30 100,20" 
-      />
-      <polyline 
-        fill="none" 
-        stroke="rgb(59, 130, 246)" 
-        strokeWidth="2" 
-        points="0,30 15,45 30,60 45,35 60,70 75,55 90,80 100,90" 
-      />
-    </svg>
-    <div className="absolute top-2 left-6 text-sm text-gray-500">Sales vs. Orders Trend</div>
-  </div>
-);
+  // Sort by sales amount descending
+  const sorted = [...menuSales].sort((a, b) => (Number(b.total_sales) || 0) - (Number(a.total_sales) || 0));
+  const maxSales = Math.max(...sorted.map(m => Number(m.total_sales) || 0));
+
+  return (
+    <div className="space-y-3 max-h-96 overflow-y-auto">
+      {sorted.map((item, idx) => {
+        const heightPercent = maxSales > 0 ? (Number(item.total_sales) || 0) / maxSales * 100 : 0;
+        return (
+          <div key={idx} className="flex items-center gap-4">
+            <div className="w-24 text-sm font-medium text-gray-700 truncate">{item.menu_name || 'N/A'}</div>
+            <div className="flex-1 flex items-center gap-2">
+              <div className="w-full bg-gray-200 rounded h-6 overflow-hidden">
+                <div 
+                  className="bg-gradient-to-r from-green-500 to-green-600 h-full transition-all" 
+                  style={{ width: `${heightPercent}%` }}
+                />
+              </div>
+              <div className="w-32 text-right">
+                <p className="text-sm font-bold text-gray-900">₱{Number(item.total_sales || 0).toLocaleString()}</p>
+                <p className="text-xs text-gray-500">{item.branch_name || 'All Branches'}</p>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
 
 const DashboardContent = () => {
   const [inventoryCount, setInventoryCount] = React.useState(0);
@@ -51,6 +58,7 @@ const DashboardContent = () => {
   const [branches, setBranches] = React.useState([]);
   const [activeUsers, setActiveUsers] = React.useState(0);
   const [recentTransactions, setRecentTransactions] = React.useState({});
+  const [menuSales, setMenuSales] = React.useState([]);
 
   React.useEffect(() => {
     const token = localStorage.getItem("token");
@@ -103,15 +111,16 @@ const DashboardContent = () => {
       })
       .catch((err) => console.error('Failed to fetch dashboard stats', err));
 
-    // branches will be derived from branchSales in a later effect; no need to hit a separate endpoint
-    // (original code attempted to call `/api/branches` which does not exist on the deployed backend).
-    // The effect below watching `branchSales` will populate `branches` and then fetch recent transactions.
-    
-    // nothing else here
-
-
-    // If branches endpoint doesn't exist, fallback to using branchSales for branch list
-    // (branchSales may arrive slightly later; handle in a separate effect)
+    // fetch top menu sales by branch
+    fetch(`${API_BASE_URL}/api/sales-superadmin/top-menu-sales`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) setMenuSales(data);
+        else if (data && Array.isArray(data.items)) setMenuSales(data.items);
+      })
+      .catch((err) => console.error('Failed to fetch menu sales', err));
   }, []);
 
   // derive branches from branchSales when branches endpoint is not available
@@ -185,19 +194,11 @@ const DashboardContent = () => {
         />
       </div>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-xl shadow-lg">
-          <h3 className="text-xl font-semibold text-gray-800 mb-4">Revenue by Category</h3>
-          <BarChartPlaceholder /> 
-          <p className="text-center text-sm text-gray-500 mt-2">Placeholder: Green (Food) and Blue (Drinks) revenue breakdown.</p>
-        </div>
-        
-        <div className="bg-white p-6 rounded-xl shadow-lg">
-          <h3 className="text-xl font-semibold text-gray-800 mb-4">Daily Transaction Trends</h3>
-          <LineChartPlaceholder />
-          <p className="text-center text-sm text-gray-500 mt-2">Placeholder: Sales (Green) vs. Order Count (Blue) over the last week.</p>
-        </div>
+      {/* Top Menu Sales Chart */}
+      <div className="bg-white p-6 rounded-xl shadow-lg mb-8">
+        <h3 className="text-xl font-semibold text-gray-800 mb-4">Top Menu Sales by Branch</h3>
+        <TopMenuSalesChart menuSales={menuSales} />
+        <p className="text-center text-sm text-gray-500 mt-4">Ranked by total sales amount across all branches</p>
       </div>
 
 
