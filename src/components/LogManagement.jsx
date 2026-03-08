@@ -203,7 +203,6 @@ const getTypeIcon = (type) => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User/Source</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Severity</th>
               </tr>
             </thead>
@@ -217,7 +216,6 @@ const getTypeIcon = (type) => {
                   </td>
                   <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-500">{log.user}</td>
                   <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-700">{log.action}</td>
-                  <td className="px-6 py-3 text-sm text-gray-500 max-w-sm truncate">{log.details}</td>
                   <td className="px-6 py-3 whitespace-nowrap">
                       <span className={`px-3 py-1 text-xs font-semibold rounded-full border ${getSeverityStyle(log.severity || 'Info')}`}>
                       {(log.severity || 'Info')}
@@ -227,7 +225,7 @@ const getTypeIcon = (type) => {
               ))}
               {filteredLogs.length === 0 && (
                 <tr>
-                  <td colSpan="6" className="text-center py-6 text-gray-500">No log entries found matching the filter criteria.</td>
+                  <td colSpan="5" className="text-center py-6 text-gray-500">No log entries found matching the filter criteria.</td>
                 </tr>
               )}
             </tbody>
