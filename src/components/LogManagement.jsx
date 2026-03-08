@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { History, Search, Download, Server, Package, Lock, User, UserCheck, UserX, Key, ShoppingCart, XCircle, RotateCcw } from 'lucide-react';
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 // initialize plugin so doc.autoTable becomes available
