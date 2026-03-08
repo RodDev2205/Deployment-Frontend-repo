@@ -147,7 +147,7 @@ export default function Records () {
                                         const statusLower = record.status ? record.status.toLowerCase() : '';
                                         let bgClass = 'bg-yellow-100 text-yellow-800';
                                         if (statusLower === 'completed') bgClass = 'bg-green-100 text-green-800';
-                                        else if (statusLower === 'voided' || statusLower === 'partial') bgClass = 'bg-red-100 text-red-800';
+                                        else if (statusLower === 'voided' || statusLower === 'partial voided') bgClass = 'bg-red-100 text-red-800';
                                         return (
                                             <span className={`px-2 py-1 rounded-full text-xs font-semibold ${bgClass}`}>
                                                 {record.status || 'Unknown'}

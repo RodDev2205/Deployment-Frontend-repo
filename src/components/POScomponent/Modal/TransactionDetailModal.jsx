@@ -53,7 +53,7 @@ export default function TransactionDetailModal({
   const remainingTotalCount = remainingItems.reduce((s, it) => s + it.remaining, 0);
   const remainingTotalAmount = remainingItems.reduce((s, it) => s + (it.remaining * it.price), 0);
 
-  const voidAllowed = (status === 'Completed' || status === 'Partial') && minutesElapsed <= 60 && remainingTotalCount > 0;
+  const voidAllowed = (status === 'Completed' || status === 'Partial Voided') && minutesElapsed <= 60 && remainingTotalCount > 0;
   const isVoidedOrRefunded = status === 'Voided' || status === 'Refunded';
 
   return (
