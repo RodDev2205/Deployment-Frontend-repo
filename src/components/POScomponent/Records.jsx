@@ -19,11 +19,23 @@ export default function Records () {
 
     const fetchTransactions = async () => {
         const token = localStorage.getItem("token");
+        if (!token) {
+            console.error("No auth token found");
+            return;
+        }
+
         try {
             const res = await fetch(`${API_BASE_URL}/api/pos/user-transactions`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
+
+            if (!res.ok) {
+                console.error("Failed to fetch transactions:", res.status, res.statusText);
+                return;
+            }
+
             const data = await res.json();
+            console.log("Fetched transactions:", data.length);
             setRecords(data);
         } catch (err) {
             console.error("Failed to fetch transactions", err);
@@ -217,8 +229,10 @@ export default function Records () {
                         data={modalData}
                         onClose={() => setIsModalOpen(false)}
                         onVoid={(txId, status) => {
-                            // Refresh data from server to ensure we have the latest status
-                            fetchTransactions();
+                            // Refresh data from server after a short delay to ensure void operation completes
+                            setTimeout(() => {
+                                fetchTransactions();
+                            }, 500);
                             if (modalData && modalData.transaction.transaction_id === txId) {
                                 setModalData({
                                     ...modalData,
