@@ -64,14 +64,15 @@ export default function AdminReportsPage() {
         const [salesRes, todayRes, paymentRes] = await Promise.all([
           fetch(
             `${API_BASE_URL}/api/sales-admin/sales?period=${period}&startDate=${startDate}&endDate=${endDate}`,
-            { headers: { Authorization: `Bearer ${token}` } }
+            { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }
           ),
           fetch(`${API_BASE_URL}/api/sales-admin/today-sales`, {
             headers: { Authorization: `Bearer ${token}` },
+            cache: 'no-store'
           }),
           fetch(
             `${API_BASE_URL}/api/sales-admin/payment-methods?startDate=${startDate}&endDate=${endDate}`,
-            { headers: { Authorization: `Bearer ${token}` } }
+            { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }
           ),
         ]);
 
