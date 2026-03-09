@@ -39,7 +39,7 @@ const TopMenuSalesChart = ({ menuSales }) => {
               {/* Bar */}
               <div className="w-full flex flex-col items-center justify-end" style={{ height: '280px' }}>
                 <div 
-                  className="w-full bg-gradient-to-t from-green-500 to-green-400 rounded-t transition-all hover:from-green-600 hover:to-green-500 cursor-pointer group relative"
+                  className="w-full bg-gradient-to-t from-green-800 to-green-600 rounded-t transition-all hover:from-green-600 hover:to-green-500 cursor-pointer group relative"
                   style={{ height: `${heightPercent}%`, minHeight: heightPercent > 0 ? '20px' : '0px' }}
                   title={`${item.menu_name}: ₱${Number(item.total_sales || 0).toLocaleString()}`}
                 >
