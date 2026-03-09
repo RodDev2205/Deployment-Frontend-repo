@@ -88,6 +88,7 @@ export default function POSCashier({ isCashier, isAdmin }) {
           paymentMethod: paymentData.paymentMethod,
           amountPaid: paymentData.amountPaid,
           discount: paymentData.discount,
+          orderType: paymentData.orderType || "dine-in",
         }),
       });
 
@@ -102,6 +103,7 @@ export default function POSCashier({ isCashier, isAdmin }) {
             total={data.totalAmount}
             change={data.changeAmount}
             cart={cart}
+            orderType={paymentData.orderType}
             onClose={() => setModalOpen(false)}
           />
         );

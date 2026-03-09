@@ -8,6 +8,7 @@ export default function ReceiptModal({
   total,
   change,
   cart,
+  orderType = 'dine-in',
   onClose,
 }) {
   const [showSuccess, setShowSuccess] = useState(false);
@@ -70,12 +71,13 @@ export default function ReceiptModal({
         <p className="text-gray-600 text-sm">Official Receipt</p>
       </div>
 
-      <div className="border-b pb-2">
+      <div className="border-b pb-2 space-y-1">
         <div className="flex justify-between text-sm mb-1">
           <span className="font-bold">{transactionNumber}</span>
           <span>{new Date().toLocaleDateString()}</span>
         </div>
         <p className="text-xs text-gray-500">Transaction ID: {transactionId}</p>
+        <p className="text-xs text-gray-500">Order type: {orderType}</p>
       </div>
 
       <div className="space-y-1">
