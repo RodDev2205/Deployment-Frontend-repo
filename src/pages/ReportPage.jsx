@@ -184,11 +184,13 @@ export default function ReportPage() {
         if (!res.ok) throw new Error('Failed to fetch KPIs');
         const data = await res.json();
         // Map API response to card layout
+        // Order: Gross Sales → Voided Sales → Total Sales (Net), then other KPIs
         const cards = [
-          { title: 'Total Sales', value: formatCurrency(data.total_sales), change: '', icon: PhilippinePeso, color: 'bg-green-100 text-green-600' },
           { title: 'Gross Sales', value: formatCurrency(data.gross_sales), change: '', icon: PhilippinePeso, color: 'bg-blue-100 text-blue-600' },
+          { title: 'Voided Sales', value: formatCurrency(data.voided_sales), change: '', icon: PhilippinePeso, color: 'bg-red-100 text-red-600' },
+          { title: 'Total Sales', value: formatCurrency(data.total_sales), change: `(Gross - Voided)`, icon: PhilippinePeso, color: 'bg-green-100 text-green-600' },
           { title: 'Total Transactions', value: data.transaction_count?.toString() || '0', change: '', icon: BarChart3, color: 'bg-purple-100 text-purple-600' },
-          { title: 'Average Order Value', value: formatCurrency(data.avg_order_value), change: '', icon: TrendingUp, color: 'bg-orange-100 text-orange-600' },
+          { title: 'Average Order Value', value: formatCurrency(data.avg_order_value), change: '(Total Sales ÷ Orders)', icon: TrendingUp, color: 'bg-orange-100 text-orange-600' },
           { title: 'Active Branches', value: data.active_branches?.toString() || '0', change: '', icon: Package, color: 'bg-pink-100 text-pink-600' },
           { title: 'Avg Transactions/Day', value: Number(data.avg_transactions_per_day).toFixed(2), change: '', icon: Users, color: 'bg-indigo-100 text-indigo-600' },
         ];
