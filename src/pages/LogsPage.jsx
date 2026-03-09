@@ -188,15 +188,6 @@ export default function LogsPage() {
     setCurrentPage(page);
   };
 
-  // ===========================
-  // Stats (FIXED LOGIC)
-  // ===========================
-  const activityStats = [
-    { label: 'Total Activities', value: normalizedLogs.length, color: 'text-blue-600' },
-    { label: 'Success', value: normalizedLogs.filter(l => l.type === 'success').length, color: 'text-green-600' },
-    { label: 'Warnings', value: normalizedLogs.filter(l => l.type === 'warning').length, color: 'text-yellow-600' },
-    { label: 'Errors', value: normalizedLogs.filter(l => l.type === 'error').length, color: 'text-red-600' },
-  ];
 
   // ===========================
   // UI
@@ -207,15 +198,6 @@ export default function LogsPage() {
         <h1 className="text-3xl font-bold text-gray-800 mb-2">Activity Logs & Records</h1>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        {activityStats.map((stat, idx) => (
-          <div key={idx} className="bg-white rounded-lg shadow-sm p-5">
-            <p className="text-gray-600 text-sm mb-1">{stat.label}</p>
-            <p className={`text-3xl font-bold ${stat.color}`}>{stat.value}</p>
-          </div>
-        ))}
-      </div>
 
       {/* Filters */}
       <div className="bg-white rounded-lg shadow-sm p-6 mb-6 flex flex-col md:flex-row gap-4">
