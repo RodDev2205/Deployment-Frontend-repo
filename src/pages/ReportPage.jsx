@@ -77,6 +77,11 @@ export default function ReportPage() {
   // menu performance data fetched from backend
   const [menuPerformance, setMenuPerformance] = useState([]);
 
+  // void transactions data for superadmin
+  const [voidTransactions, setVoidTransactions] = useState([]);
+  const [voidCurrentPage, setVoidCurrentPage] = useState(1);
+  const voidItemsPerPage = 5;
+
   // Calculate branch contribution percentages
   const totalBranchSales = branchComparisonData.reduce((sum, b) => sum + Number(b.total_sales), 0);
   const branchContribution = branchComparisonData.map((branch, idx) => {
@@ -277,6 +282,29 @@ export default function ReportPage() {
       }
     };
     fetchMenuPerformance();
+
+    const fetchVoidTransactions = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        const { startDate, endDate } = getRangeDates(dateRange);
+        const branchParam = selectedBranch && selectedBranch !== 'all' ? `&branchId=${selectedBranch}` : '';
+        const res = await fetch(`${API_BASE_URL}/api/sales-superadmin/void-transactions?startDate=${startDate}&endDate=${endDate}${branchParam}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!res.ok) {
+          const errText = await res.text();
+          console.error('void transactions API error body', errText);
+          throw new Error(`Failed to fetch void transactions: ${res.status}`);
+        }
+        const data = await res.json();
+        setVoidTransactions(data || []);
+        setVoidCurrentPage(1); // Reset to first page when data changes
+      } catch (err) {
+        console.error('Failed to load void transactions', err);
+      }
+    };
+    fetchVoidTransactions();
   }, [dateRange, selectedBranch]);
 
   const handleExportPDF = () => {
@@ -597,6 +625,89 @@ export default function ReportPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+
+        {/* Void Transactions Section */}
+        <div className="bg-white rounded-2xl shadow-sm p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Void Transactions</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="px-4 py-3 text-sm font-semibold text-gray-900">Transaction ID</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-gray-900">Branch</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-gray-900">Status</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-gray-900">Cashier</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-gray-900">Void Amount</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-gray-900">Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(() => {
+                  const startIndex = (voidCurrentPage - 1) * voidItemsPerPage;
+                  const endIndex = startIndex + voidItemsPerPage;
+                  const paginatedData = voidTransactions.slice(startIndex, endIndex);
+
+                  return paginatedData.map((transaction, idx) => (
+                    <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50 transition">
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">#{transaction.transaction_id}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{transaction.branch_name}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          transaction.status === 'Voided' 
+                            ? 'bg-red-100 text-red-800' 
+                            : transaction.status === 'Partial Refunded'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {transaction.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{transaction.cashier_name || 'N/A'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">₱{Number(transaction.void_amount || 0).toLocaleString()}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {new Date(transaction.created_at).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </td>
+                    </tr>
+                  ));
+                })()}
+              </tbody>
+            </table>
+
+            {/* Pagination Controls */}
+            {voidTransactions.length > voidItemsPerPage && (
+              <div className="flex items-center justify-between mt-4">
+                <div className="text-sm text-gray-600">
+                  Showing {Math.min((voidCurrentPage - 1) * voidItemsPerPage + 1, voidTransactions.length)} to {Math.min(voidCurrentPage * voidItemsPerPage, voidTransactions.length)} of {voidTransactions.length} entries
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setVoidCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={voidCurrentPage === 1}
+                    className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Previous
+                  </button>
+                  <span className="text-sm text-gray-600">
+                    Page {voidCurrentPage} of {Math.ceil(voidTransactions.length / voidItemsPerPage)}
+                  </span>
+                  <button
+                    onClick={() => setVoidCurrentPage(prev => Math.min(prev + 1, Math.ceil(voidTransactions.length / voidItemsPerPage)))}
+                    disabled={voidCurrentPage === Math.ceil(voidTransactions.length / voidItemsPerPage)}
+                    className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
