@@ -125,12 +125,12 @@ export default function ReportPage() {
 
   // KPI Cards (stateful — populated from backend)
   const [kpiCards, setKpiCards] = useState([
-    { title: 'Total Revenue', value: '₱3,160,000', change: '+12.5%', icon: PhilippinePeso, color: 'bg-green-100 text-green-600' },
-    { title: 'Total Transactions', value: '4,250', change: '+8.2%', icon: BarChart3, color: 'bg-blue-100 text-blue-600' },
-    { title: 'Average Order Value', value: '₱743', change: '+5.1%', icon: TrendingUp, color: 'bg-purple-100 text-purple-600' },
-    { title: 'Active Branches', value: '4', change: '0%', icon: Package, color: 'bg-orange-100 text-orange-600' },
-    { title: 'Avg Transactions/Day', value: '607', change: '+3.2%', icon: Users, color: 'bg-pink-100 text-pink-600' },
-    { title: 'Month-to-Date', value: '28 days', change: '-2 days', icon: Calendar, color: 'bg-indigo-100 text-indigo-600' },
+    { title: 'Total Revenue', value: '0', change: '+0%', icon: PhilippinePeso, color: 'bg-green-100 text-green-600' },
+    { title: 'Total Transactions', value: '0', change: '+0%', icon: BarChart3, color: 'bg-blue-100 text-blue-600' },
+    { title: 'Average Order Value', value: '0', change: '+0%', icon: TrendingUp, color: 'bg-purple-100 text-purple-600' },
+    { title: 'Active Branches', value: '0', change: '+0%', icon: Package, color: 'bg-orange-100 text-orange-600' },
+    { title: 'Avg Transactions/Day', value: '0', change: '+0%', icon: Users, color: 'bg-pink-100 text-pink-600' },
+    { title: 'Month-to-Date', value: '0 days', change: '+0 days', icon: Calendar, color: 'bg-indigo-100 text-indigo-600' },
   ]);
 
   const formatCurrency = (n) => `₱${Number(n || 0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
