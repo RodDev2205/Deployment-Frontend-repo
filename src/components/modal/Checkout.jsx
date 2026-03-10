@@ -36,24 +36,7 @@ export default function Checkout({ orderItems = [], orderType, discountType = "N
       setError('Insufficient cash given.');
       return;
     }
-
-    const orderData = {
-      date: new Date().toLocaleString(),
-      orderId: Math.floor(Math.random() * 100000), // generate random for now
-      orderType,
-      paymentMethod: "Cash",
-      given: cashGiven,
-      change: displayChange,
-      total,
-      cart: orderItems.map(item => ({
-        qty: item.quantity,
-        item: item.name,
-        price: typeof item.price === 'string' ? parseFloat(item.price.replace('₱', '').replace(',', '')) : Number(item.price)
-      }))
-    };
-
-    console.log("💰 Checkout data prepared:", orderData);
-    onProceed && onProceed(orderData);
+    onProceed && onProceed();
   };
 
   return (
