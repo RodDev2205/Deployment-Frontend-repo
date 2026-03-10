@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAlert } from "@/context/AlertContext";
-import API_BASE_URL from '../../../config/api';
+import { printReceipt } from '../../../utils/printUtils';
 
 export default function ReceiptModal({
   transactionId,
@@ -12,41 +12,49 @@ export default function ReceiptModal({
   onClose,
 }) {
   const [showSuccess, setShowSuccess] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
   const { error } = useAlert();
 
+  // auto-print when modal mounts
+  useEffect(() => {
+    console.log("📋 ReceiptModal loaded, auto-printing...");
+    handlePrint();
+  }, []);
+
   const handlePrint = async () => {
-    const payload = {
-      transactionId,
-      transactionNumber,
-      cart,
-      total,
-      change,
+    console.log("🖨️ Starting frontend print via QZ Tray...");
+    setIsPrinting(true);
+    
+    const orderData = {
       date: new Date().toLocaleString(),
+      orderId: transactionNumber,
+      orderType: orderType || 'dine-in',
+      paymentMethod: "Cash",
+      given: total + change,
+      change: change,
+      total: total,
+      cart: cart.map(item => ({
+        qty: item.qty || item.quantity || 1,
+        item: item.item || item.product_name || "Unknown Item",
+        price: item.price || 0
+      }))
     };
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/print-receipt`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      console.log("📤 Sending to QZ Tray (local printer)...", orderData);
+      await printReceipt(orderData);
+      console.log("✅ Print successful");
+      setShowSuccess(true);
+      setIsPrinting(false);
 
-      const data = await res.json();
-
-      if (data.success) {
-        setShowSuccess(true);
-
-        // ✅ Auto close popup + modal
-        setTimeout(() => {
-          setShowSuccess(false);
-          onClose();
-        }, 2000);
-      } else {
-        error("Printer Error", data.message ? `Printer error: ${data.message}` : "Failed to print receipt.");
-      }
+      setTimeout(() => {
+        setShowSuccess(false);
+        onClose();
+      }, 2000);
     } catch (err) {
-      console.error(err);
-      error("Print Failed", "Failed to print receipt.");
+      console.error("❌ Print failed:", err);
+      setIsPrinting(false);
+      error("Print Failed", "Failed to print receipt: " + err.message);
     }
   };
 
@@ -114,14 +122,20 @@ export default function ReceiptModal({
 
       <div className="flex gap-2 mt-2">
         <button
-          className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-lg transition-colors"
+          className={`flex-1 font-bold py-2 rounded-lg transition-colors ${
+            isPrinting
+              ? "bg-blue-400 text-white cursor-wait"
+              : "bg-green-600 hover:bg-green-700 text-white"
+          }`}
           onClick={handlePrint}
+          disabled={isPrinting}
         >
-          🖨️ Print Receipt
+          {isPrinting ? "🔄 Printing..." : "🖨️ Print Receipt"}
         </button>
         <button
           className="flex-1 bg-gray-300 hover:bg-gray-400 font-bold py-2 rounded-lg transition-colors"
           onClick={onClose}
+          disabled={isPrinting}
         >
           Close
         </button>
