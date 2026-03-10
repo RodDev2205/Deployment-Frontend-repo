@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import API_BASE_URL from '../../config/api';
-import { Store } from "lucide-react";
+import { Store, Eye, FilePenLine } from "lucide-react";
 import AddBranchModal from "./AddBranches";
 import ViewBranchModal from "./ViewBranchModal";
 import EditBranchModal from "./EditBranchModal";
@@ -85,7 +85,7 @@ export default function BranchList() {
 
           {branches.map((branch) => (
             <div
-              key={branch._id || branch.id}
+              key={branch.branch_id}
               className="rounded-lg border border-gray-200 bg-white p-6 transition-shadow hover:shadow-md"
             >
               <div className="flex items-start justify-between">
@@ -114,9 +114,9 @@ export default function BranchList() {
                       setSelectedBranch(branch);
                       setIsViewModalOpen(true);
                     }}
-                    className="rounded border border-green-600 px-3 py-1 font-medium text-green-600 hover:bg-green-50"
+                    className="rounded border border-green-600 p-2 text-green-600 hover:bg-green-50 flex items-center justify-center"
                   >
-                    View
+                    <Eye className="w-5 h-5" />
                   </button>
 
                   {/* EDIT */}

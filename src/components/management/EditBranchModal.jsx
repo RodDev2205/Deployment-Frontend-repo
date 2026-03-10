@@ -29,7 +29,7 @@ export default function EditBranchModal({ isOpen, onClose, branch, onSubmit }) {
     try {
       const token = localStorage.getItem("token");
 
-      const res = await fetch(`${API_BASE_URL}/api/branches/${branch._id || branch.id}`,
+      const res = await fetch(`${API_BASE_URL}/api/branches/${branch.branch_id}`,
         {
           method: "PUT", // or PATCH if your backend prefers
           headers: {
