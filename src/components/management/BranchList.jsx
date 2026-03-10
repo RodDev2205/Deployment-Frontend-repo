@@ -125,10 +125,11 @@ export default function BranchList() {
                       setSelectedBranch(branch);
                       setIsEditModalOpen(true);
                     }}
-                    className="rounded border border-green-600 px-3 py-1 font-medium text-green-600 hover:bg-green-50"
+                    className="rounded border border-green-600 p-2 text-green-600 hover:bg-green-50 flex items-center justify-center"
                   >
-                    Edit
+                    <FilePenLine className="w-5 h-5" />
                   </button>
+                  
                 </div>
               </div>
             </div>
