@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAlert } from "@/context/AlertContext";
+import API_BASE_URL from '../../config/api';
 
 // 1. Added onSubmit to the props destructuring
 export default function AddBranchModal({ isOpen, onClose, onSubmit }) {
