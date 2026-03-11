@@ -77,11 +77,16 @@ export default function UserList({ type }) {
     let temp = [...users];
 
     if (searchTerm) {
-      temp = temp.filter(
-        (user) =>
-          user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          user.username.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      const term = searchTerm.toLowerCase();
+      temp = temp.filter((user) => {
+        // build a searchable name string (some APIs return first_name/last_name)
+        const nameStr =
+          (user.name || `${user.first_name || ""} ${user.last_name || ""}`)
+            .toString()
+            .toLowerCase();
+        const usernameStr = (user.username || "").toString().toLowerCase();
+        return nameStr.includes(term) || usernameStr.includes(term);
+      });
     }
 
     if (filterBranch) {
