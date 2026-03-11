@@ -46,10 +46,22 @@ export default function EditBranchModal({ isOpen, onClose, branch, onSubmit }) {
         }
       );
 
-      const data = await res.json();
+      // handle cases where backend returns HTML (404 page) instead of JSON
+      let data;
+      const text = await res.text();
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = { message: text };
+      }
 
       if (!res.ok) {
-        alertError("Error", data.message || "Failed to update branch");
+        // if 404, give more descriptive message
+        const msg =
+          res.status === 404
+            ? "Branch not found (it may have been deleted)"
+            : data.message || "Failed to update branch";
+        alertError("Error", msg);
         return;
       }
 
