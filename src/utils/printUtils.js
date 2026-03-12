@@ -56,17 +56,24 @@ export const printReceipt = async (orderData) => {
     receipt.push('-------------------------------\n');
     orderData.cart.forEach(item => {
       const total = item.qty * item.price;
-      // use PHP text instead of peso symbol
-      receipt.push(`${item.qty.toString().padStart(3)}  ${item.item.padEnd(20)} PHP${total.toFixed(2).padStart(6)}\n`);
-      receipt.push(`      @ PHP${item.price.toFixed(2)}\n`);
+      // right-align price in 10-char field for better alignment
+      const priceField = `PHP${total.toFixed(2)}`.padStart(10);
+      receipt.push(`${item.qty.toString().padStart(3)}  ${item.item.padEnd(20)} ${priceField}\n`);
+      const unitPriceField = `PHP${item.price.toFixed(2)}`.padStart(10);
+      receipt.push(`   @ ${unitPriceField}\n`);
     });
     receipt.push('-------------------------------\n');
-    receipt.push(`Subtotal:                PHP${orderData.total.toFixed(2)}\n`);
+    // right-align totals in 10-char field for consistency
+    const subtotalField = `PHP${orderData.total.toFixed(2)}`.padStart(10);
+    receipt.push(`Subtotal: ${subtotalField}\n`);
     if (orderData.paymentMethod === "Cash") {
-      receipt.push(`Given:                   PHP${parseFloat(orderData.given).toFixed(2)}\n`);
-      receipt.push(`Change:                  PHP${parseFloat(orderData.change).toFixed(2)}\n`);
+      const givenField = `PHP${parseFloat(orderData.given).toFixed(2)}`.padStart(10);
+      const changeField = `PHP${parseFloat(orderData.change).toFixed(2)}`.padStart(10);
+      receipt.push(`Given: ${givenField}\n`);
+      receipt.push(`Change: ${changeField}\n`);
     }
-    receipt.push(`TOTAL:                   PHP${orderData.total.toFixed(2)}\n`);
+    const totalField = `PHP${orderData.total.toFixed(2)}`.padStart(10);
+    receipt.push(`TOTAL: ${totalField}\n`);
     receipt.push('-------------------------------\n');
     receipt.push('\x1B\x61\x01');
     receipt.push('Thank you for dining!\n');
