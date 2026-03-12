@@ -63,17 +63,12 @@ export const printReceipt = async (orderData) => {
       receipt.push(`   @ ${unitPriceField}\n`);
     });
     receipt.push('-------------------------------\n');
-    // right-align totals in 10-char field for consistency
-    const subtotalField = `PHP${orderData.total.toFixed(2)}`.padStart(10);
-    receipt.push(`Subtotal: ${subtotalField}\n`);
+    receipt.push(`Subtotal:              ₱${orderData.total.toFixed(2)}\n`);
     if (orderData.paymentMethod === "Cash") {
-      const givenField = `PHP${parseFloat(orderData.given).toFixed(2)}`.padStart(10);
-      const changeField = `PHP${parseFloat(orderData.change).toFixed(2)}`.padStart(10);
-      receipt.push(`Given: ${givenField}\n`);
-      receipt.push(`Change: ${changeField}\n`);
+      receipt.push(`Given:               ₱${parseFloat(orderData.given).toFixed(2)}\n`);
+      receipt.push(`Change:              ₱${parseFloat(orderData.change).toFixed(2)}\n`);
     }
-    const totalField = `PHP${orderData.total.toFixed(2)}`.padStart(10);
-    receipt.push(`TOTAL: ${totalField}\n`);
+    receipt.push(`TOTAL:                 ₱${orderData.total.toFixed(2)}\n`);
     receipt.push('-------------------------------\n');
     receipt.push('\x1B\x61\x01');
     receipt.push('Thank you for dining!\n');
