@@ -26,7 +26,7 @@ export const printReceipt = async (orderData) => {
     // Configure the printer (serial connection COM6)
     const serialPrinter = qz.configs.create("Serial Printer", {
       type: 'serial',
-      portName: 'COM6',
+      portName: 'COM5',
       baudRate: 9600,
       dataBits: 8,
       stopBits: 1,
