@@ -4,6 +4,7 @@ import { Printer, Eye } from 'lucide-react';
 import Modal from "./Modal/Modal";
 import TransactionDetailModal from "../POScomponent/Modal/TransactionDetailModal";
 import API_BASE_URL from '../../config/api';
+import { printReceipt } from '../../utils/printUtils';
 
 export default function Records () {
     const [records, setRecords] = useState([]);
