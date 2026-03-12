@@ -98,6 +98,8 @@ export default function Records () {
                 orderId: data.transaction.transaction_number,
                 orderType: data.transaction.order_type || "Dine-in",
                 paymentMethod: data.transaction.payment_method || "Cash",
+                location: data.transaction.branch_address || "", // added branch info
+                contact: data.transaction.branch_contact || "",
                 cart: data.items.map(item => ({
                     qty: parseInt(item.quantity) || 0,
                     item: item.product_name,
