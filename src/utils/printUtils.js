@@ -24,14 +24,8 @@ export const printReceipt = async (orderData) => {
     }
 
     // Configure the printer (serial connection COM6)
-    const serialPrinter = qz.configs.create("POS-58(copy of 1)", {
-      type: 'serial',
-      portName: 'COM5',
-      baudRate: 9600,
-      dataBits: 8,
-      stopBits: 1,
-      parity: 'none'
-    });
+    const Printer = qz.configs.create("POS-58(copy of 1)");
+
 
     console.log("📄 Formatting receipt for print...");
 
@@ -71,7 +65,7 @@ export const printReceipt = async (orderData) => {
     receipt.push('\x1D\x56\x00');
 
     console.log("🖨️ Sending to printer...");
-    await qz.print(serialPrinter, receipt);
+    await qz.print(Printer, receipt);
     console.log("✅ Print successful");
   } catch (err) {
     console.error("❌ Print failed:", err);
