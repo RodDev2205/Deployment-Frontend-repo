@@ -63,10 +63,10 @@ export const printReceipt = async (orderData) => {
       receipt.push(`   @ ${unitPriceField}\n`);
     });
     receipt.push('-------------------------------\n');
-    receipt.push(`Subtotal:              ₱${orderData.total.toFixed(2)}\n`);
+    receipt.push(`Subtotal:              PHP${orderData.total.toFixed(2)}\n`);
     if (orderData.paymentMethod === "Cash") {
-      receipt.push(`Given:               ₱${parseFloat(orderData.given).toFixed(2)}\n`);
-      receipt.push(`Change:              ₱${parseFloat(orderData.change).toFixed(2)}\n`);
+      receipt.push(`Given:               PHP${parseFloat(orderData.given).toFixed(2)}\n`);
+      receipt.push(`Change:              PHP${parseFloat(orderData.change).toFixed(2)}\n`);
     }
     receipt.push(`TOTAL:                 ₱${orderData.total.toFixed(2)}\n`);
     receipt.push('-------------------------------\n');
