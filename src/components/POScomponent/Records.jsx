@@ -16,7 +16,7 @@ export default function Records () {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalData, setModalData] = useState(null);
     const [detailLoading, setDetailLoading] = useState(false);
-    const { error } = useAlert();
+    const { success, error } = useAlert();
 
     const fetchTransactions = async () => {
         const token = localStorage.getItem("token");
@@ -83,7 +83,7 @@ export default function Records () {
         setDetailLoading(true);
         try {
             const token = localStorage.getItem("token");
-            // fetch transaction details first then send to print endpoint
+            // fetch transaction details first
             const res = await fetch(`${API_BASE_URL}/api/pos/transaction/${transaction.transaction_id}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
@@ -91,12 +91,25 @@ export default function Records () {
             if (!res.ok) {
                 throw new Error(data.message || "Failed to load transaction");
             }
-            // send payload to print
-            await fetch(`${API_BASE_URL}/api/print-receipt`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                body: JSON.stringify(data),
-            });
+
+            // Format data for printUtils
+            const printData = {
+                date: new Date(data.transaction.created_at).toLocaleString(),
+                orderId: data.transaction.transaction_number,
+                orderType: data.transaction.order_type || "Dine-in",
+                paymentMethod: data.transaction.payment_method || "Cash",
+                cart: data.items.map(item => ({
+                    qty: item.quantity,
+                    item: item.product_name,
+                    price: item.price
+                })),
+                total: data.transaction.total_amount,
+                given: data.transaction.amount_paid || data.transaction.total_amount,
+                change: (data.transaction.amount_paid || 0) - data.transaction.total_amount
+            };
+
+            // Use printUtils to print directly
+            await printReceipt(printData);
             success("Printing", "Receipt sent to printer");
         } catch (err) {
             console.error("Print error", err);
