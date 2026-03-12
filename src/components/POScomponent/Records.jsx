@@ -99,13 +99,13 @@ export default function Records () {
                 orderType: data.transaction.order_type || "Dine-in",
                 paymentMethod: data.transaction.payment_method || "Cash",
                 cart: data.items.map(item => ({
-                    qty: item.quantity,
+                    qty: parseInt(item.quantity) || 0,
                     item: item.product_name,
-                    price: item.price
+                    price: parseFloat(item.price) || 0
                 })),
-                total: data.transaction.total_amount,
-                given: data.transaction.amount_paid || data.transaction.total_amount,
-                change: (data.transaction.amount_paid || 0) - data.transaction.total_amount
+                total: parseFloat(data.transaction.total_amount) || 0,
+                given: parseFloat(data.transaction.amount_paid) || parseFloat(data.transaction.total_amount) || 0,
+                change: (parseFloat(data.transaction.amount_paid) || 0) - (parseFloat(data.transaction.total_amount) || 0)
             };
 
             // Use printUtils to print directly
