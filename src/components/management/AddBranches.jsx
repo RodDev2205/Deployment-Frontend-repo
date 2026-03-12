@@ -4,8 +4,6 @@ import API_BASE_URL from '../../config/api';
 
 // 1. Added onSubmit to the props destructuring
 export default function AddBranchModal({ isOpen, onClose, onSubmit }) {
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
   const [branchName, setBranchName] = useState("");
   const [address, setAddress] = useState("");
   const [contact, setContact] = useState("");
@@ -52,8 +50,6 @@ export default function AddBranchModal({ isOpen, onClose, onSubmit }) {
       }
 
       // Reset form
-      setFirstName("");
-      setLastName("");
       setBranchName("");
       setAddress("");
       setContact("");
@@ -76,24 +72,6 @@ export default function AddBranchModal({ isOpen, onClose, onSubmit }) {
       <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg">
         <h2 className="mb-4 text-lg font-semibold">Add New Branch</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <h3 className="text-sm font-medium text-gray-700">First Name</h3>
-          <input
-            type="text"
-            placeholder="First Name"
-            value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
-            required
-            className="w-full rounded-lg border px-3 py-2"
-          />
-          <h3 className="text-sm font-medium text-gray-700">Last Name</h3>
-          <input
-            type="text"
-            placeholder="Last Name"
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
-            required
-            className="w-full rounded-lg border px-3 py-2"
-          />
           <h3 className="text-sm font-medium text-gray-700">Branch Name</h3>
           <input
             type="text"
