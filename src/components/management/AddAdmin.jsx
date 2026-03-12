@@ -9,10 +9,12 @@ export default function AddAdminModal({ isOpen, onClose, onSubmit }) {
   const [errorMsg, setErrorMsg] = useState("");
 
   const [formData, setFormData] = useState({
-    full_name: "",
+    first_name: "",
+    last_name: "",
     username: "",
     password: "",
     branch_id: "",
+    contact_number: "",
   });
 
   // 🔹 Fetch branches when modal opens
@@ -57,13 +59,22 @@ export default function AddAdminModal({ isOpen, onClose, onSubmit }) {
     try {
       const token = localStorage.getItem("token");
 
+      const payload = {
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        username: formData.username,
+        password: formData.password,
+        branch_id: formData.branch_id,
+        contact_number: formData.contact_number,
+      };
+
       const res = await fetch(`${API_BASE_URL}/api/superadmin/createAdmin`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -80,10 +91,12 @@ export default function AddAdminModal({ isOpen, onClose, onSubmit }) {
 
       // Reset form
       setFormData({
-        full_name: "",
+        first_name: "",
+        last_name: "",
         username: "",
         password: "",
         branch_id: "",
+        contact_number: "",
       });
     } catch (err) {
       console.error(err);
@@ -113,19 +126,34 @@ export default function AddAdminModal({ isOpen, onClose, onSubmit }) {
             <p className="text-red-500 text-sm">{errorMsg}</p>
           )}
 
-          {/* Full Name */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Full Name
-            </label>
-            <input
-              type="text"
-              name="full_name"
-              required
-              value={formData.full_name}
-              onChange={handleChange}
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:outline-none"
-            />
+          {/* First & Last Name */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                First Name
+              </label>
+              <input
+                type="text"
+                name="first_name"
+                required
+                value={formData.first_name}
+                onChange={handleChange}
+                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Last Name
+              </label>
+              <input
+                type="text"
+                name="last_name"
+                required
+                value={formData.last_name}
+                onChange={handleChange}
+                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:outline-none"
+              />
+            </div>
           </div>
 
           {/* Username */}
@@ -153,6 +181,19 @@ export default function AddAdminModal({ isOpen, onClose, onSubmit }) {
               name="password"
               required
               value={formData.password}
+              onChange={handleChange}
+              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:outline-none"
+            />
+          </div>
+          {/* Contact Number */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Contact Number
+            </label>
+            <input
+              type="tel"
+              name="contact_number"
+              value={formData.contact_number}
               onChange={handleChange}
               className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:outline-none"
             />
