@@ -167,6 +167,7 @@ export default function AddAdminModal({ isOpen, onClose, onSubmit }) {
               required
               value={formData.username}
               onChange={handleChange}
+              autoComplete="off"
               className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:outline-none"
             />
           </div>
@@ -182,6 +183,7 @@ export default function AddAdminModal({ isOpen, onClose, onSubmit }) {
               required
               value={formData.password}
               onChange={handleChange}
+              autoComplete="off"
               className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:outline-none"
             />
           </div>
