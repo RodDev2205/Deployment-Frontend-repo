@@ -178,39 +178,11 @@ export default function LogsPage() {
   });
 
   // ===========================
-  // Pagination Helper
-  // ===========================
-  const getVisiblePages = (currentPage, totalPages) => {
-    const pages = [];
-    if (totalPages <= 7) {
-      for (let i = 1; i <= totalPages; i++) {
-        pages.push(i);
-      }
-    } else {
-      pages.push(1);
-      if (currentPage > 4) {
-        pages.push('...');
-      }
-      const start = Math.max(2, currentPage - 1);
-      const end = Math.min(totalPages - 1, currentPage + 1);
-      for (let i = start; i <= end; i++) {
-        pages.push(i);
-      }
-      if (currentPage < totalPages - 3) {
-        pages.push('...');
-      }
-      pages.push(totalPages);
-    }
-    return pages;
-  };
-
-  // ===========================
   // Pagination
   // ===========================
   const totalPages = Math.ceil(filteredLogs.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedLogs = filteredLogs.slice(startIndex, startIndex + itemsPerPage);
-  const visiblePages = getVisiblePages(currentPage, totalPages);
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
@@ -341,35 +313,31 @@ export default function LogsPage() {
             <div className="text-sm text-gray-700">
               Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredLogs.length)} of {filteredLogs.length} entries
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 overflow-x-auto">
               <button
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
-                className="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 flex-shrink-0"
               >
                 <ChevronLeft size={16} />
               </button>
-              {visiblePages.map((page, index) => (
-                page === '...' ? (
-                  <span key={index} className="px-3 py-1 text-sm text-gray-500">...</span>
-                ) : (
-                  <button
-                    key={page}
-                    onClick={() => handlePageChange(page)}
-                    className={`px-3 py-1 border rounded-md text-sm ${
-                      page === currentPage
-                        ? 'bg-green-600 text-white border-green-600'
-                        : 'border-gray-300 hover:bg-gray-100'
-                    }`}
-                  >
-                    {page}
-                  </button>
-                )
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <button
+                  key={page}
+                  onClick={() => handlePageChange(page)}
+                  className={`px-3 py-1 border rounded-md text-sm flex-shrink-0 ${
+                    page === currentPage
+                      ? 'bg-green-600 text-white border-green-600'
+                      : 'border-gray-300 hover:bg-gray-100'
+                  }`}
+                >
+                  {page}
+                </button>
               ))}
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 flex-shrink-0"
               >
                 <ChevronRight size={16} />
               </button>
