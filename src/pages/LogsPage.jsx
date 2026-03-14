@@ -181,33 +181,27 @@ export default function LogsPage() {
   // Pagination Helper
   // ===========================
   const getVisiblePages = (currentPage, totalPages) => {
-    const delta = 2; // Number of pages to show before and after current page
-    const range = [];
-    const rangeWithDots = [];
-
-    // Add pages around current page
-    for (let i = Math.max(2, currentPage - delta); i <= Math.min(totalPages - 1, currentPage + delta); i++) {
-      range.push(i);
-    }
-
-    // Add first page
-    if (currentPage - delta > 2) {
-      rangeWithDots.push(1, '...');
+    const pages = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
     } else {
-      rangeWithDots.push(1);
+      pages.push(1);
+      if (currentPage > 4) {
+        pages.push('...');
+      }
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(totalPages - 1, currentPage + 1);
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+      if (currentPage < totalPages - 3) {
+        pages.push('...');
+      }
+      pages.push(totalPages);
     }
-
-    // Add the range
-    rangeWithDots.push(...range);
-
-    // Add last page
-    if (currentPage + delta < totalPages - 1) {
-      rangeWithDots.push('...', totalPages);
-    } else if (totalPages > 1) {
-      rangeWithDots.push(totalPages);
-    }
-
-    return rangeWithDots;
+    return pages;
   };
 
   // ===========================
