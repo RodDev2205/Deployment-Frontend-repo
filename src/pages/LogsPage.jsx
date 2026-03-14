@@ -178,11 +178,45 @@ export default function LogsPage() {
   });
 
   // ===========================
+  // Pagination Helper
+  // ===========================
+  const getVisiblePages = (currentPage, totalPages) => {
+    const delta = 2; // Number of pages to show before and after current page
+    const range = [];
+    const rangeWithDots = [];
+
+    // Add pages around current page
+    for (let i = Math.max(2, currentPage - delta); i <= Math.min(totalPages - 1, currentPage + delta); i++) {
+      range.push(i);
+    }
+
+    // Add first page
+    if (currentPage - delta > 2) {
+      rangeWithDots.push(1, '...');
+    } else {
+      rangeWithDots.push(1);
+    }
+
+    // Add the range
+    rangeWithDots.push(...range);
+
+    // Add last page
+    if (currentPage + delta < totalPages - 1) {
+      rangeWithDots.push('...', totalPages);
+    } else if (totalPages > 1) {
+      rangeWithDots.push(totalPages);
+    }
+
+    return rangeWithDots;
+  };
+
+  // ===========================
   // Pagination
   // ===========================
   const totalPages = Math.ceil(filteredLogs.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedLogs = filteredLogs.slice(startIndex, startIndex + itemsPerPage);
+  const visiblePages = getVisiblePages(currentPage, totalPages);
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
@@ -321,18 +355,22 @@ export default function LogsPage() {
               >
                 <ChevronLeft size={16} />
               </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                <button
-                  key={page}
-                  onClick={() => handlePageChange(page)}
-                  className={`px-3 py-1 border rounded-md text-sm ${
-                    page === currentPage
-                      ? 'bg-green-600 text-white border-green-600'
-                      : 'border-gray-300 hover:bg-gray-100'
-                  }`}
-                >
-                  {page}
-                </button>
+              {visiblePages.map((page, index) => (
+                page === '...' ? (
+                  <span key={index} className="px-3 py-1 text-sm text-gray-500">...</span>
+                ) : (
+                  <button
+                    key={page}
+                    onClick={() => handlePageChange(page)}
+                    className={`px-3 py-1 border rounded-md text-sm ${
+                      page === currentPage
+                        ? 'bg-green-600 text-white border-green-600'
+                        : 'border-gray-300 hover:bg-gray-100'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                )
               ))}
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
