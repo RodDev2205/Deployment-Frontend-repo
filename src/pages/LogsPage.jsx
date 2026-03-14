@@ -313,31 +313,21 @@ export default function LogsPage() {
             <div className="text-sm text-gray-700">
               Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredLogs.length)} of {filteredLogs.length} entries
             </div>
-            <div className="flex items-center gap-2 overflow-x-auto">
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
-                className="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 flex-shrink-0"
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
               >
                 <ChevronLeft size={16} />
               </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                <button
-                  key={page}
-                  onClick={() => handlePageChange(page)}
-                  className={`px-3 py-1 border rounded-md text-sm flex-shrink-0 ${
-                    page === currentPage
-                      ? 'bg-green-600 text-white border-green-600'
-                      : 'border-gray-300 hover:bg-gray-100'
-                  }`}
-                >
-                  {page}
-                </button>
-              ))}
+              <span className="px-3 py-1 text-sm text-gray-700">
+                Page {currentPage} of {totalPages}
+              </span>
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 flex-shrink-0"
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
               >
                 <ChevronRight size={16} />
               </button>
