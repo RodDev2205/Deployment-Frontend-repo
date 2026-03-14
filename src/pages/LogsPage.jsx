@@ -188,6 +188,69 @@ export default function LogsPage() {
     setCurrentPage(page);
   };
 
+  // ===========================
+  // Export to PDF
+  // ===========================
+  const exportToPDF = async (logs) => {
+    try {
+      const { jsPDF } = await import('jspdf');
+      const autoTableModule = await import('jspdf-autotable');
+      const autoTable = autoTableModule.default || autoTableModule;
+      
+      const doc = new jsPDF();
+
+      // Add title
+      doc.setFontSize(20);
+      doc.text('Activity Logs & Records Report', 14, 22);
+
+      // Add generation timestamp
+      doc.setFontSize(10);
+      doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 32);
+      doc.text(`Total Records: ${logs.length}`, 14, 38);
+
+      // Prepare table data
+      const tableData = logs.map(log => [
+        formatTimestamp(log.timestamp),
+        log.type || 'N/A',
+        log.user || 'N/A',
+        log.action || 'N/A',
+        log.category || 'N/A'
+      ]);
+
+      // Add table using autoTable plugin function directly
+      if (typeof autoTable === 'function') {
+        autoTable(doc, {
+          head: [['Timestamp', 'Type', 'User', 'Action', 'Category']],
+          body: tableData,
+          startY: 45,
+          styles: {
+            fontSize: 8,
+            cellPadding: 3,
+          },
+          headStyles: {
+            fillColor: [27, 94, 32], // #1B5E20
+            textColor: 255,
+            fontSize: 9,
+            fontStyle: 'bold',
+          },
+          alternateRowStyles: {
+            fillColor: [245, 245, 245],
+          },
+          margin: { top: 45 },
+        });
+      } else {
+        console.error('autoTable plugin not loaded');
+      }
+
+      // Save the PDF
+      const fileName = `activity_logs_${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(fileName);
+    } catch (err) {
+      console.error('PDF export failed:', err);
+      alert('Failed to generate PDF. See console for details.');
+    }
+  };
+
 
   // ===========================
   // UI
@@ -244,7 +307,7 @@ export default function LogsPage() {
           </select>
         </div>
 
-        <button className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition flex items-center gap-2">
+        <button className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition flex items-center gap-2" onClick={() => exportToPDF(filteredLogs)} title="Export Logs to PDF">
           <Download size={18} />
           Export
         </button>
