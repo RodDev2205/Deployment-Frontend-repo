@@ -32,6 +32,8 @@ export default function AdminReportsPage() {
   const [voidPage, setVoidPage] = useState(1); // current page for void tracking
   const itemsPerPage = 5; // items per page for void tracking
 
+  const [refreshTrigger, setRefreshTrigger] = useState(0); // To trigger refetch
+
   // helper: convert DB rows into chart-compatible format based on the currently selected period
   const transformTrend = (rows) => {
     return rows.map((r) => {
@@ -162,7 +164,7 @@ export default function AdminReportsPage() {
     };
 
     fetchSalesData();
-  }, [period]);
+  }, [period, refreshTrigger]);
   const kpis = [
     {
       title: "Total Sales Today",
@@ -286,6 +288,12 @@ export default function AdminReportsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setRefreshTrigger(prev => prev + 1)}
+            className="flex items-center gap-2 bg-gray-600 text-white px-4 py-2 rounded-xl shadow-md hover:opacity-90"
+          >
+            Refresh
+          </button>
           <button
             onClick={exportCSV}
             className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl shadow-md hover:opacity-90"
