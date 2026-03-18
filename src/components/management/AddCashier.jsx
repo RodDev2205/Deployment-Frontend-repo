@@ -94,6 +94,8 @@ export default function AddAdminModal({ isOpen, onClose, onSubmit }) {
           branch_id: "",
           contact_number: "",
         });
+        // Refresh the page to show the new cashier
+        window.location.reload();
       });
     } catch (err) {
       console.error(err);
