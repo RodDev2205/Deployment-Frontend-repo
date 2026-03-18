@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { X, UserPlus } from "lucide-react";
 import  API_BASE_URL  from "../../config/api";
+import { useAlert } from "../../context/AlertContext";
 
 export default function AddAdminModal({ isOpen, onClose, onSubmit }) {
+  const { success, error } = useAlert();
   const [branches, setBranches] = useState([]);
   const [loadingBranches, setLoadingBranches] = useState(false);
   const [loadingSubmit, setLoadingSubmit] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
 
   const [formData, setFormData] = useState({
     first_name: "",
@@ -54,7 +55,6 @@ export default function AddAdminModal({ isOpen, onClose, onSubmit }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoadingSubmit(true);
-    setErrorMsg("");
 
     try {
       const token = localStorage.getItem("token");
@@ -83,24 +83,22 @@ export default function AddAdminModal({ isOpen, onClose, onSubmit }) {
         throw new Error(data.error || "Failed to create admin");
       }
 
-      console.log("Admin created:", data);
-
-      if (onSubmit) onSubmit();
-
-      onClose();
-
-      // Reset form
-      setFormData({
-        first_name: "",
-        last_name: "",
-        username: "",
-        password: "",
-        branch_id: "",
-        contact_number: "",
+      success("Success", "Admin created successfully!", () => {
+        if (onSubmit) onSubmit();
+        onClose();
+        // Reset form
+        setFormData({
+          first_name: "",
+          last_name: "",
+          username: "",
+          password: "",
+          branch_id: "",
+          contact_number: "",
+        });
       });
     } catch (err) {
       console.error(err);
-      setErrorMsg(err.message);
+      error("Error", err.message);
     } finally {
       setLoadingSubmit(false);
     }
@@ -122,9 +120,6 @@ export default function AddAdminModal({ isOpen, onClose, onSubmit }) {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          {errorMsg && (
-            <p className="text-red-500 text-sm">{errorMsg}</p>
-          )}
 
           {/* First & Last Name */}
           <div className="grid grid-cols-2 gap-4">
