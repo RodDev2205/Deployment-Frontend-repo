@@ -82,6 +82,10 @@ export default function ReportPage() {
   const [voidCurrentPage, setVoidCurrentPage] = useState(1);
   const voidItemsPerPage = 5;
 
+  // menu performance pagination
+  const [menuCurrentPage, setMenuCurrentPage] = useState(1);
+  const menuItemsPerPage = 5;
+
   // Calculate branch contribution percentages
   const totalBranchSales = branchComparisonData.reduce((sum, b) => sum + Number(b.total_sales), 0);
   const branchContribution = branchComparisonData.map((branch, idx) => {
@@ -347,6 +351,7 @@ export default function ReportPage() {
         }
         const data = await res.json();
         setMenuPerformance(data || []);
+        setMenuCurrentPage(1); // Reset to first page when data changes
       } catch (err) {
         console.error('Failed to load menu performance', err);
       }
@@ -689,19 +694,51 @@ export default function ReportPage() {
                 </tr>
               </thead>
               <tbody>
-                {menuPerformance.map((item, idx) => (
-                  <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50 transition">
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.menuItem}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{item.sold.toLocaleString()}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">₱{item.revenue.toLocaleString()}</td>
-                  </tr>
-                ))}
+                {(() => {
+                  const startIndex = (menuCurrentPage - 1) * menuItemsPerPage;
+                  const endIndex = startIndex + menuItemsPerPage;
+                  const paginatedData = menuPerformance.slice(startIndex, endIndex);
+
+                  return paginatedData.map((item, idx) => (
+                    <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50 transition">
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.menuItem}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{item.sold.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">₱{item.revenue.toLocaleString()}</td>
+                    </tr>
+                  ));
+                })()}
               </tbody>
             </table>
           </div>
-        </div>
 
-        {/* Void Transactions Section */}
+          {/* Pagination Controls */}
+          {menuPerformance.length > menuItemsPerPage && (
+            <div className="flex items-center justify-between mt-4">
+              <div className="text-sm text-gray-600">
+                Showing {Math.min((menuCurrentPage - 1) * menuItemsPerPage + 1, menuPerformance.length)} to {Math.min(menuCurrentPage * menuItemsPerPage, menuPerformance.length)} of {menuPerformance.length} entries
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setMenuCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={menuCurrentPage === 1}
+                  className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                <span className="text-sm text-gray-600">
+                  Page {menuCurrentPage} of {Math.ceil(menuPerformance.length / menuItemsPerPage)}
+                </span>
+                <button
+                  onClick={() => setMenuCurrentPage(prev => Math.min(prev + 1, Math.ceil(menuPerformance.length / menuItemsPerPage)))}
+                  disabled={menuCurrentPage === Math.ceil(menuPerformance.length / menuItemsPerPage)}
+                  className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
         <div className="bg-white rounded-2xl shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Void Transactions</h2>
           <div className="overflow-x-auto">
