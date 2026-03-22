@@ -38,7 +38,7 @@ export default function ViewBranchModal({ isOpen, onClose, branch }) {
         </div>
 
         {/* Heading */}
-        <div className="px-3 py-4">
+        <div className="px-6 py-2">
           <h3 className="text-lg font-semibold text-gray-800">Branch Details</h3>
         </div>
 
