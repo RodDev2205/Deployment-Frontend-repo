@@ -38,12 +38,12 @@ export default function ViewBranchModal({ isOpen, onClose, branch }) {
         </div>
 
         {/* Heading */}
-        <div className="px-6 py-2">
+        <div className="px-6 py-4">
           <h3 className="text-lg font-semibold text-gray-800">Branch Details</h3>
         </div>
 
         {/* Content */}
-        <div className="p-6 min-h-[320px]">
+        <div className="p-4 min-h-[320px]">
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <InfoItem label="Name" value={branch.name || branch.branchName} />
             <InfoItem label="Contact Number" value={branch.contact} />
