@@ -57,12 +57,6 @@ export default function ViewBranchModal({ isOpen, onClose, branch }) {
 
         {/* Footer */}
         <div className="flex justify-end border-t bg-gray-50 px-6 py-4">
-          <button
-            onClick={onClose}
-            className="rounded-lg bg-gray-200 px-4 py-2 text-gray-700 hover:bg-gray-300"
-          >
-            Close
-          </button>
         </div>
       </div>
     </div>
