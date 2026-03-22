@@ -121,12 +121,17 @@ export default function MenuManagementUI() {
 
   const handleAddItem = (item) => {
     console.log("New Item:", item);
+    if (!item) {
+      alertError("Error", "No menu item data received.");
+      return;
+    }
     // Refresh products after adding new item using same status filter as current tab
     if (activeTab === 'Archived') {
       fetchArchivedItems();
     } else {
       fetchProducts('active');
     }
+    success("Menu Item Added", "Menu item created successfully.");
   };
 
   const handleEdit = (item) => {
@@ -346,6 +351,7 @@ export default function MenuManagementUI() {
           }
           fetchDeclinedItems();
           setIsEditOpen(false);
+          success("Menu Updated", "Menu item updated successfully.");
         }}
         item={selectedItem}
         categories={categories}

@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { AlertTriangle, Plus, Edit } from "lucide-react";
 import API_BASE_URL from '../../config/api';
+import { useAlert } from "@/context/AlertContext";
 import AddIngredientModal from "../inventory/models/AddIngredientModal";
 import EditIngredientModal from "../inventory/models/EditIngredientModal";
 
@@ -11,6 +12,7 @@ const InventoryManagement = () => {
   const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedIngredient, setSelectedIngredient] = useState(null);
+  const { success, error } = useAlert();
 
   // ✅ Fetch ingredients from backend (branch-based)
   const fetchIngredients = async () => {
@@ -41,8 +43,9 @@ const InventoryManagement = () => {
         setInventory([]); // fallback safety
       }
 
-    } catch (error) {
-      console.error("Fetch error:", error);
+    } catch (err) {
+      console.error("Fetch error:", err);
+      error("Failed to fetch inventory", err.message || "Please try again.");
     } finally {
       setLoading(false);
     }
@@ -58,9 +61,13 @@ const InventoryManagement = () => {
     // The modal already posts to the backend and provides the created
     // ingredient (including `inventory_id`). Avoid posting again here —
     // just merge the returned ingredient into local state.
-    if (!newIngredient) return;
+    if (!newIngredient) {
+      error("Add Ingredient", "Ingredient data is missing.");
+      return;
+    }
 
     setInventory((prev) => [newIngredient, ...prev]);
+    success("Ingredient Added", "New inventory item created successfully.");
   };
 
   // Low stock is determined by units (quantity) compared to low_stock_threshold

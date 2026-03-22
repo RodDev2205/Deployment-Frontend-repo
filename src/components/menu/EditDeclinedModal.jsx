@@ -91,6 +91,7 @@ export default function EditItemModal({ item, onClose, onUpdated }) {
       }
 
       if (typeof onUpdated === "function") onUpdated(data);
+      success("Updated", "Declined menu item successfully submitted for review.");
       onClose();
     } catch (err) {
       console.error("Submit error:", err);
