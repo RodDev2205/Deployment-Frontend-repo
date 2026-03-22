@@ -8,12 +8,9 @@ import ResetPasswordModal from "./ResetPasswordModal";
 
 export default function CashierManagement() {
   const [cashiers, setCashiers] = useState([]);
-  const { error: alertError, success } = useAlert();
+  const { error, success } = useAlert();
   const [editingCashier, setEditingCashier] = useState(null);
   const [resettingCashier, setResettingCashier] = useState(null);
-
-  const [notification, setNotification] = useState("");
-  const [showNotification, setShowNotification] = useState(false);
 
   useEffect(() => {
     fetchCashiers();
@@ -50,10 +47,10 @@ export default function CashierManagement() {
       if (!res.ok) throw new Error(data.error || "Failed to add cashier");
 
       fetchCashiers();
-      triggerNotification("Cashier added successfully!");
+      success("Success", "Cashier added successfully!");
     } catch (err) {
       console.error("Error adding cashier:", err);
-      alertError("Error", err.message);
+      error("Error", err.message);
     }
   };
 
@@ -71,10 +68,10 @@ export default function CashierManagement() {
       setCashiers(prev =>
         prev.map(c => (c.id === id ? { ...c, status: data.status } : c))
       );
-      triggerNotification("Status updated successfully!");
+      success("Success", "Status updated successfully!");
     } catch (err) {
       console.error("Failed to toggle status:", err);
-      alertError("Error", err.message);
+      error("Error", err.message);
     }
   };
 
@@ -103,10 +100,10 @@ export default function CashierManagement() {
         )
       );
       setEditingCashier(null);
-      triggerNotification("Cashier updated successfully!");
+      success("Success", "Cashier updated successfully!");
     } catch (err) {
       console.error("Failed to update cashier:", err);
-      alertError("Error", err.message);
+      error("Error", err.message);
     }
   };
 
@@ -124,37 +121,15 @@ export default function CashierManagement() {
       if (!res.ok) throw new Error(data.error || "Failed to update password");
 
       setResettingCashier(null);
-      triggerNotification("Password updated successfully!");
+      success("Success", "Password updated successfully!");
     } catch (err) {
       console.error("Failed to update password:", err);
-      alertError("Error", err.message);
+      error("Error", err.message);
     }
-  };
-
-  // ---------- Notification Animation ----------
-  const triggerNotification = (message) => {
-    setNotification(message);
-    setShowNotification(true);
-
-    setTimeout(() => {
-      setShowNotification(false);
-      setTimeout(() => setNotification(""), 500); // remove after fade
-    }, 2000);
   };
 
   return (
     <div className="space-y-8 relative">
-      {/* Notification popup */}
-      {notification && (
-        <div
-          className={`fixed top-5 right-5 bg-green-600 bg-opacity-80 text-white px-4 py-2 rounded shadow-lg z-50 border border-black/30
-            transition-all duration-500 ease-in-out transform
-            ${showNotification ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"}`}
-        >
-          {notification}
-        </div>
-      )}
-
       <h2 className="text-3xl font-bold text-gray-800">Cashier Account Management</h2>
 
       <AddNewCashierForm onAddCashier={handleAddCashier} />
