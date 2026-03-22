@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useAlert } from "@/context/AlertContext";
 import AddMenuItemModal from "../menu/modal/AddMenuItemModal";
 import EditMenuItemModal from "../menu/modal/EditMenuItemModal";
-import { Edit2, Trash2, Search } from "lucide-react";
+import { Edit2, Search } from "lucide-react";
 import API_BASE_URL from '../../config/api';
 
 export default function MenuManagementUI() {
@@ -140,33 +140,6 @@ export default function MenuManagementUI() {
     setIsEditOpen(true);
   };
 
-  const handleDelete = (productId) => {
-    danger(
-      "Delete Item",
-      "Are you sure you want to delete this item?",
-      async () => {
-        try {
-          const token = localStorage.getItem("token");
-          const res = await fetch(`${API_BASE}/menu/${productId}`, {
-            method: "DELETE",
-            headers: {
-              "Authorization": `Bearer ${token}`,
-            },
-          });
-          if (res.ok) {
-            setMenuItems((prev) => prev.filter((item) => item.product_id !== productId));
-            success("Deleted", "Menu item removed successfully.");
-          } else {
-            alertError("Delete Failed", "Failed to delete item");
-          }
-        } catch (err) {
-          console.error(err);
-          alertError("Error", err.message);
-        }
-      }
-    );
-  };
-
   return (
     <div className="space-y-8 p-6">
       <div className="flex items-center justify-between">
@@ -264,19 +237,11 @@ export default function MenuManagementUI() {
                 <div className="mt-auto flex gap-2">
                   <button
                     onClick={() => handleEdit(item)}
-                    className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 rounded transition font-medium flex items-center justify-center gap-2"
+                    className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded transition font-medium flex items-center justify-center gap-2"
                     title="Edit item"
                   >
                     <Edit2 size={16} />
                     Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(item.product_id)}
-                    className="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 rounded transition font-medium flex items-center justify-center gap-2"
-                    title="Delete item"
-                  >
-                    <Trash2 size={16} />
-                    Delete
                   </button>
                 </div>
               </div>
@@ -309,19 +274,11 @@ export default function MenuManagementUI() {
                 <div className="mt-auto flex gap-2">
                   <button
                     onClick={() => { setSelectedItem(item); setEditingDeclined(true); setIsEditOpen(true); }}
-                    className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 rounded transition font-medium flex items-center justify-center gap-2"
+                    className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded transition font-medium flex items-center justify-center gap-2"
                     title="Edit declined item"
                   >
                     <Edit2 size={16} />
                     Edit / Resubmit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(item.product_id)}
-                    className="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 rounded transition font-medium flex items-center justify-center gap-2"
-                    title="Delete item"
-                  >
-                    <Trash2 size={16} />
-                    Delete
                   </button>
                 </div>
               </div>
