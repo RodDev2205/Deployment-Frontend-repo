@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { AlertTriangle } from "lucide-react";
 import { useAlert } from "@/context/AlertContext";
-import API_BASE_URL from '../../config/api';
+import API_BASE_URL from "../../config/api";
 
 import InventoryTabs from "./InventoryTabs";
 import StockTabContent from "./StockTabContent";
@@ -11,6 +11,7 @@ import PortionFormulaModal from "./PortionFormulaModal";
 // ================== Ingredient Modal ==================
 const IngredientModal = ({ onClose, onSave, item }) => {
   const { error: alertError } = useAlert();
+
   const [form, setForm] = useState({
     name: item?.name || "",
     unit: item?.unit || "",
@@ -20,7 +21,10 @@ const IngredientModal = ({ onClose, onSave, item }) => {
 
   const handleChange = (e) => {
     const value =
-      e.target.name === "quantity" ? parseFloat(e.target.value) : e.target.value;
+      e.target.name === "quantity"
+        ? parseFloat(e.target.value) || 0
+        : e.target.value;
+
     setForm({ ...form, [e.target.name]: value });
   };
 
@@ -79,7 +83,10 @@ const IngredientModal = ({ onClose, onSave, item }) => {
         </div>
 
         <div className="flex justify-end gap-3 mt-4">
-          <button className="px-4 py-2 bg-gray-200 rounded-lg" onClick={onClose}>
+          <button
+            className="px-4 py-2 bg-gray-200 rounded-lg"
+            onClick={onClose}
+          >
             Cancel
           </button>
           <button
@@ -122,18 +129,21 @@ const LowStockModal = ({ lowStockItems, onClose }) => (
 
 // ================== MAIN COMPONENT ==================
 const InventoryManagement = () => {
+  const { error: alertError } = useAlert();
+
   const [inventory, setInventory] = useState([]);
-  const { error: alertError, success } = useAlert();
   const [portions, setPortions] = useState([]);
 
   const [activeTab, setActiveTab] = useState("stock");
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: "ascending" });
+  const [sortConfig, setSortConfig] = useState({
+    key: null,
+    direction: "ascending",
+  });
 
   // Modals
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
-
   const [showLowStockModal, setShowLowStockModal] = useState(false);
 
   const [showPortionModal, setShowPortionModal] = useState(false);
@@ -141,21 +151,39 @@ const InventoryManagement = () => {
 
   // ================== LOAD INGREDIENTS ==================
   useEffect(() => {
-    fetch(`${API_BASE_URL}/api/raw-items`)
-      .then((res) => res.json())
-      .then((data) => setInventory(data))
-      .catch((err) => console.error("Inventory fetch error:", err));
+    const loadInventory = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/raw-items`);
+        if (!res.ok) throw new Error("Failed to fetch inventory");
+        const data = await res.json();
+        setInventory(data);
+      } catch (err) {
+        console.error("Inventory fetch error:", err);
+      }
+    };
+
+    loadInventory();
   }, []);
 
   // ================== LOAD PORTIONS ==================
   const loadPortions = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/portions`);
+      if (!res.ok) throw new Error("Failed to fetch portions");
+
       const data = await res.json();
+
       const formatted = data.map((p) => ({
         ...p,
-        formula: JSON.parse(p.formula_json || "[]"),
+        formula: (() => {
+          try {
+            return JSON.parse(p.formula_json || "[]");
+          } catch {
+            return [];
+          }
+        })(),
       }));
+
       setPortions(formatted);
     } catch (err) {
       console.error("Portion fetch error:", err);
@@ -166,7 +194,7 @@ const InventoryManagement = () => {
     loadPortions();
   }, []);
 
-  // ================== ADD/UPDATE INGREDIENT ==================
+  // ================== ADD ITEM ==================
   const handleAddItem = async (newItem) => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/raw-items`, {
@@ -174,8 +202,12 @@ const InventoryManagement = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newItem),
       });
+
+      if (!res.ok) throw new Error("Failed to save");
+
       const saved = await res.json();
-      setInventory([...inventory, saved]);
+      setInventory((prev) => [...prev, saved]);
+
       setShowAddModal(false);
     } catch (err) {
       console.error(err);
@@ -183,6 +215,7 @@ const InventoryManagement = () => {
     }
   };
 
+  // ================== UPDATE ITEM ==================
   const handleSaveItem = async (updatedItem) => {
     try {
       const res = await fetch(
@@ -193,10 +226,17 @@ const InventoryManagement = () => {
           body: JSON.stringify(updatedItem),
         }
       );
+
+      if (!res.ok) throw new Error("Failed to update");
+
       const saved = await res.json();
-      setInventory(
-        inventory.map((i) => (i.raw_item_id === saved.raw_item_id ? saved : i))
+
+      setInventory((prev) =>
+        prev.map((i) =>
+          i.raw_item_id === saved.raw_item_id ? saved : i
+        )
       );
+
       setEditingItem(null);
     } catch (err) {
       console.error(err);
@@ -204,7 +244,7 @@ const InventoryManagement = () => {
     }
   };
 
-  // ================== SAVE/UPDATE PORTION ==================
+  // ================== SAVE PORTION ==================
   const handleSavePortion = async (portionData) => {
     try {
       const method = editingPortion ? "PUT" : "POST";
@@ -212,7 +252,7 @@ const InventoryManagement = () => {
         ? `${API_BASE_URL}/api/portions/${editingPortion.portion_id}`
         : `${API_BASE_URL}/api/portions`;
 
-      await fetch(url, {
+      const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -221,6 +261,8 @@ const InventoryManagement = () => {
           formula: portionData.formula,
         }),
       });
+
+      if (!res.ok) throw new Error("Failed to save portion");
 
       await loadPortions();
     } catch (error) {
@@ -232,33 +274,45 @@ const InventoryManagement = () => {
     }
   };
 
-  // ================== LOW STOCK FILTER ==================
-  const lowStockItems = inventory.filter((i) => i.quantity <= 10);
-
-  // ================== FILTERING ==================
-  const filteredItems = inventory.filter((item) =>
-    (item.name || "").toLowerCase().includes(searchTerm.toLowerCase())
+  // ================== LOW STOCK ==================
+  const lowStockItems = inventory.filter(
+    (i) => (i.quantity ?? 0) <= 10
   );
 
-  // ================== SORTING ==================
+  // ================== FILTER ==================
+  const filteredItems = inventory.filter((item) =>
+    (item.name || "")
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase())
+  );
+
+  // ================== SORT ==================
   const sortedItems = [...filteredItems].sort((a, b) => {
-    if (sortConfig.key) {
-      if (a[sortConfig.key] < b[sortConfig.key])
-        return sortConfig.direction === "ascending" ? -1 : 1;
-      if (a[sortConfig.key] > b[sortConfig.key])
-        return sortConfig.direction === "ascending" ? 1 : -1;
-    }
+    if (!sortConfig.key) return 0;
+
+    if (a[sortConfig.key] < b[sortConfig.key])
+      return sortConfig.direction === "ascending" ? -1 : 1;
+
+    if (a[sortConfig.key] > b[sortConfig.key])
+      return sortConfig.direction === "ascending" ? 1 : -1;
+
     return 0;
   });
 
   const requestSort = (key) => {
     let direction = "ascending";
-    if (sortConfig.key === key && sortConfig.direction === "ascending")
+
+    if (
+      sortConfig.key === key &&
+      sortConfig.direction === "ascending"
+    ) {
       direction = "descending";
+    }
+
     setSortConfig({ key, direction });
   };
 
-  // ================== RENDER ==================
+  // ================== UI ==================
   return (
     <div className="space-y-8">
       <h2 className="text-3xl font-bold text-gray-800">
@@ -274,7 +328,10 @@ const InventoryManagement = () => {
         </div>
       )}
 
-      <InventoryTabs activeTab={activeTab} setActiveTab={setActiveTab} />
+      <InventoryTabs
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+      />
 
       {activeTab === "stock" && (
         <StockTabContent
@@ -300,11 +357,14 @@ const InventoryManagement = () => {
       )}
 
       {showAddModal && (
-        <IngredientModal onClose={() => setShowAddModal(false)} onSave={handleAddItem} />
+        <IngredientModal
+          onClose={() => setShowAddModal(false)}
+          onSave={handleAddItem}
+        />
       )}
 
       {editingItem && (
-        <IngredientModal  
+        <IngredientModal
           item={editingItem}
           onClose={() => setEditingItem(null)}
           onSave={handleSaveItem}
@@ -324,7 +384,10 @@ const InventoryManagement = () => {
       )}
 
       {showLowStockModal && (
-        <LowStockModal lowStockItems={lowStockItems} onClose={() => setShowLowStockModal(false)} />
+        <LowStockModal
+          lowStockItems={lowStockItems}
+          onClose={() => setShowLowStockModal(false)}
+        />
       )}
     </div>
   );
