@@ -8,6 +8,7 @@ import EditBranchModal from "./EditBranchModal";
 export default function BranchList() {
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const [isAddBranchModalOpen, setIsAddBranchModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -15,20 +16,38 @@ export default function BranchList() {
 
   const [selectedBranch, setSelectedBranch] = useState(null);
 
+  //  FETCH WITH FULL ERROR HANDLING
   const fetchBranches = async () => {
     setLoading(true);
+    setError(null);
+
     try {
       const token = localStorage.getItem("token");
+
+      if (!token) {
+        throw new Error("No authentication token found.");
+      }
+
       const res = await fetch(`${API_BASE_URL}/api/branches/getBranches`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to fetch branches");
+      let data;
+
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error("Invalid server response.");
+      }
+
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to fetch branches");
+      }
 
       setBranches(data.branches || []);
     } catch (err) {
-      console.error(err);
+      console.error("Fetch error:", err);
+      setError(err.message || "Something went wrong.");
     } finally {
       setLoading(false);
     }
@@ -38,24 +57,42 @@ export default function BranchList() {
     fetchBranches();
   }, []);
 
+  //  SAFE HANDLERS
   const handleCreateBranch = () => {
-    fetchBranches();
-    setIsAddBranchModalOpen(false);
+    try {
+      fetchBranches();
+      setIsAddBranchModalOpen(false);
+    } catch (err) {
+      console.error("Create branch error:", err);
+    }
   };
 
   const handleEditBranch = () => {
-    fetchBranches();
-    setIsEditModalOpen(false);
+    try {
+      fetchBranches();
+      setIsEditModalOpen(false);
+    } catch (err) {
+      console.error("Edit branch error:", err);
+    }
   };
 
+  //  SAFE TIME FORMATTER
   const formatTime = (timeString) => {
-    if (!timeString) return "--";
-    const date = new Date(`1970-01-01T${timeString}`);
-    return date.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    });
+    try {
+      if (!timeString) return "--";
+
+      const date = new Date(`1970-01-01T${timeString}`);
+
+      if (isNaN(date.getTime())) return "--";
+
+      return date.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+    } catch {
+      return "--";
+    }
   };
 
   return (
@@ -63,6 +100,7 @@ export default function BranchList() {
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <h2 className="text-xl font-semibold text-gray-800">Branch List</h2>
+
         <button
           onClick={() => setIsAddBranchModalOpen(true)}
           className="flex items-center rounded-lg bg-green-600 px-4 py-2 font-medium text-white hover:bg-green-700"
@@ -72,12 +110,25 @@ export default function BranchList() {
         </button>
       </div>
 
+      {/*  ERROR DISPLAY */}
+      {error && (
+        <div className="mb-4 rounded-lg bg-red-100 border border-red-300 p-3 text-red-700">
+          {error}
+          <button
+            onClick={fetchBranches}
+            className="ml-4 underline text-sm"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* Content */}
       {loading ? (
-        <p>Loading branches...</p>
+        <p className="text-gray-500">Loading branches...</p>
       ) : (
         <div className="grid gap-4">
-          {branches.length === 0 && (
+          {branches.length === 0 && !error && (
             <div className="rounded-lg border border-dashed border-gray-300 bg-white p-8 text-center text-gray-500">
               No branches yet.
             </div>
@@ -85,7 +136,7 @@ export default function BranchList() {
 
           {branches.map((branch) => (
             <div
-              key={branch.branch_id}
+              key={branch.branch_id || Math.random()}
               className="rounded-lg border border-gray-200 bg-white p-6 transition-shadow hover:shadow-md"
             >
               <div className="flex items-start justify-between">
@@ -94,6 +145,7 @@ export default function BranchList() {
                     <h3 className="text-lg font-semibold text-gray-800">
                       {branch.name || branch.branchName || "Unnamed Branch"}
                     </h3>
+
                     <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
                       {formatTime(branch.openingTime)} -{" "}
                       {formatTime(branch.closingTime)}
@@ -101,9 +153,9 @@ export default function BranchList() {
                   </div>
 
                   <div className="space-y-1 text-sm text-gray-600">
-                    <p>{branch.address}</p>
-                    <p>{branch.contact}</p>
-                    <p>Created by: {branch.createdBy}</p>
+                    <p>{branch.address || "No address provided"}</p>
+                    <p>{branch.contact || "No contact info"}</p>
+                    <p>Created by: {branch.createdBy || "Unknown"}</p>
                   </div>
                 </div>
 
@@ -129,7 +181,6 @@ export default function BranchList() {
                   >
                     <FilePenLine className="w-5 h-5" />
                   </button>
-                  
                 </div>
               </div>
             </div>
