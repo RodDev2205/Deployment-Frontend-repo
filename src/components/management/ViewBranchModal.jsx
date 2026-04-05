@@ -17,6 +17,19 @@ export default function ViewBranchModal({ isOpen, onClose, branch }) {
     });
   };
 
+  const formatContactPerson = () => {
+    if (
+      branch.contactPersonFirstName &&
+      branch.contactPersonLastName &&
+      branch.contactPersonUsername
+    ) {
+      const contactInfo = `${branch.contactPersonFirstName} ${branch.contactPersonLastName} (${branch.contactPersonUsername})`;
+      const contactNumber = branch.contactPersonContactNumber?.trim();
+      return contactNumber ? `${contactInfo} - ${contactNumber}` : contactInfo;
+    }
+    return "No contact person assigned";
+  };
+
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
@@ -46,8 +59,8 @@ export default function ViewBranchModal({ isOpen, onClose, branch }) {
         <div className="p-4 min-h-[320px]">
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <InfoItem label="Name" value={branch.name || branch.branchName} />
-            <InfoItem label="Contact Number" value={branch.contact} />
-            <InfoItem label="Address" value={branch.address} />
+            <InfoItem label="Contact Person" value={formatContactPerson()} />
+            <InfoItem label="Location" value={branch.locationText || "No saved location"} />
             <InfoItem label="Opening Time" value={formatTime(branch.openingTime)} />
             <InfoItem label="Closing Time" value={formatTime(branch.closingTime)} />
             <InfoItem label="Status" value={branch.status || "Active"} />

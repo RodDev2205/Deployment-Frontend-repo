@@ -95,6 +95,25 @@ export default function BranchList() {
     }
   };
 
+  const formatLocationText = (branch) => {
+    if (branch.locationText) return branch.locationText;
+    if (branch.address) return branch.address;
+    return "No location available";
+  };
+
+  const formatContactPerson = (branch) => {
+    if (
+      branch.contactPersonFirstName &&
+      branch.contactPersonLastName &&
+      branch.contactPersonUsername
+    ) {
+      const contactInfo = `${branch.contactPersonFirstName} ${branch.contactPersonLastName} (${branch.contactPersonUsername})`;
+      const contactNumber = branch.contactPersonContactNumber?.trim();
+      return contactNumber ? `${contactInfo} - ${contactNumber}` : contactInfo;
+    }
+    return "No contact person assigned";
+  };
+
   return (
     <div>
       {/* Header */}
@@ -153,8 +172,8 @@ export default function BranchList() {
                   </div>
 
                   <div className="space-y-1 text-sm text-gray-600">
-                    <p>{branch.address || "No address provided"}</p>
-                    <p>{branch.contact || "No contact info"}</p>
+                    <p>{branch.locationText ? `Location: ${branch.locationText}` : "No saved location"}</p>
+                    <p>Contact Person: {formatContactPerson(branch)}</p>
                     <p>Created by: {branch.createdBy || "Unknown"}</p>
                   </div>
                 </div>
