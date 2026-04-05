@@ -207,7 +207,7 @@ export default function ChatRoom() {
         {/* Chat Area */}
         <div className="flex flex-col flex-1 bg-white rounded-xl shadow-sm min-h-0 overflow-hidden">
           {/* Header */}
-          <header className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-green-700 to-green-800 flex-shrink-0">
+          <header className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-emerald-600 to-emerald-700 flex-shrink-0">
             <div className="flex items-center gap-3">
               <div className="bg-white/20 text-white w-10 h-10 rounded-lg flex items-center justify-center">
                 <Users className="w-5 h-5" />
@@ -240,12 +240,12 @@ export default function ChatRoom() {
                     <div
                       className={`max-w-xs rounded-lg px-4 py-2.5 ${
                         isCurrentUser
-                          ? "bg-green-800 text-white"
+                          ? "bg-emerald-600 text-white"
                           : "bg-white text-gray-800 border border-gray-200"
                       }`}
                     >
                       {!isCurrentUser && (
-                        <p className="text-xs font-medium mb-1 text-green-800">
+                        <p className="text-xs font-medium mb-1 text-emerald-700">
                           {msg.full_name || msg.username || "Unknown"}
                         </p>
                       )}
@@ -308,7 +308,7 @@ export default function ChatRoom() {
               <button
                 type="submit"
                 disabled={(!message.trim() && !file) || !activeBranchId}
-                className="p-2 bg-green-700 text-white rounded-lg hover:bg-green-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Send className="w-5 h-5" />
               </button>
@@ -318,9 +318,9 @@ export default function ChatRoom() {
 
         {/* Sidebar - Branch List */}
         <div className="w-80 flex flex-col bg-white rounded-xl shadow-sm min-h-0 overflow-hidden">
-          <div className="bg-gradient-to-r from-green-700 to-green-800 px-6 py-4 flex-shrink-0">
+          <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 px-6 py-4 flex-shrink-0">
             <h2 className="text-lg font-semibold text-white">Branch Chats</h2>
-            <p className="text-xs text-green-100">
+            <p className="text-xs text-emerald-100">
               {isLoading ? "Loading..." : `${branches.length} branch${branches.length !== 1 ? "es" : ""}`}
             </p>
           </div>
@@ -338,11 +338,11 @@ export default function ChatRoom() {
                     key={branch.branch_id}
                     onClick={() => setActiveBranchId(branch.branch_id)}
                     className={`w-full px-4 py-3 border-b text-left hover:bg-green-50 transition ${
-                      isActive ? "bg-green-50 border-l-4 border-l-green-700" : ""
+                      isActive ? "bg-green-50 border-l-4 border-l-emerald-700" : ""
                     }`}
                   >
                     <div className="flex items-start gap-3">
-                      <div className="w-9 h-9 bg-green-100 text-green-800 rounded-lg flex items-center justify-center font-semibold text-sm flex-shrink-0">
+                      <div className="w-9 h-9 bg-green-100 text-emerald-700 rounded-lg flex items-center justify-center font-semibold text-sm flex-shrink-0">
                         {branch.branch_name.charAt(0).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
