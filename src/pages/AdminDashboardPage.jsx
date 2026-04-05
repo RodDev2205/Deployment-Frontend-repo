@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   ShoppingCart, 
@@ -23,11 +23,41 @@ import CashierManagement from '../components/cashiers/CashierManagement';
 import LogManagement from '../components/LogManagement';
 import Records from '../components/POScomponent/Records';
 import POS from '../components/POSadminContent';
-import ChatRoomPage from './ChatRoomPage';  // Example additional page
-import AdminReportPage from './AdminReportPage';  // Example additional page
-import AdminSettingsPage from './SettingsPage';  // Example additional page
-import Modal from "../components/POScomponent/Modal/Modal";   // ✅ Reusable Modal Component
-import { useNavigate } from 'react-router-dom';
+import ChatRoomPage from './ChatRoomPage';
+import AdminReportPage from './AdminReportPage';
+import AdminSettingsPage from './SettingsPage';
+import Modal from "../components/POScomponent/Modal/Modal";
+
+
+// ✅ Error Boundary (INLINE)
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("Error caught:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-6 text-red-600">
+          <h2 className="text-xl font-bold">Something went wrong.</h2>
+          <p>Please refresh the page.</p>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 
 // Placeholder Component
 const PlaceholderPage = ({ title }) => (
@@ -39,45 +69,68 @@ const PlaceholderPage = ({ title }) => (
   </div>
 );
 
+
 function AdminDashboardPage() {
   const [activeItem, setActiveItem] = useState('Dashboard');
   const location = useLocation();
+  const navigate = useNavigate();
 
-  // update activeItem whenever the URL path changes
-  React.useEffect(() => {
-    const parts = location.pathname.split('/').filter(Boolean); // ['admin', 'inventory']
-    if (parts.length <= 1) {
-      setActiveItem('Dashboard');
-    } else {
-      const key = parts[1];
-      // convert path segment to title-case name
-      const title = key
-        .split('-')
-        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-        .join(' ');
-      setActiveItem(title || 'Dashboard');
-    }
-  }, [location.pathname]);
-  
   // ✅ GLOBAL MODAL STATES
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalContent, setModalContent] = useState(null);
 
-  const navigate = useNavigate();
+  // ✅ FIXED route → title mapping
+  useEffect(() => {
+    try {
+      const parts = location.pathname.split('/').filter(Boolean);
 
-  // Function passed to children to open modal
+      if (parts.length <= 1) {
+        setActiveItem('Dashboard');
+      } else {
+        const key = parts[1];
+
+        const formatMap = {
+          pos: 'POS',
+          'chat-room': 'Chat Room',
+          transactions: 'Transactions',
+          cashiers: 'Cashiers',
+          reports: 'Reports',
+          logs: 'Logs',
+          settings: 'Settings',
+          inventory: 'Inventory',
+          menu: 'Menu'
+        };
+
+        const title = formatMap[key] ||
+          key
+            .split('-')
+            .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+            .join(' ');
+
+        setActiveItem(title || 'Dashboard');
+      }
+    } catch (error) {
+      console.error("Route parsing error:", error);
+      setActiveItem('Dashboard');
+    }
+  }, [location.pathname]);
+
+  // Modal handlers
   const openModal = (content) => {
-    setModalContent(content);
-    setIsModalOpen(true);
+    try {
+      setModalContent(content);
+      setIsModalOpen(true);
+    } catch (error) {
+      console.error("Open modal error:", error);
+    }
   };
 
-  // Close modal function
   const closeModal = () => {
     setIsModalOpen(false);
     setModalContent(null);
   };
 
-  // Navigation items (include path for routing)
+  // Navigation items
   const adminNavItems = [
     { name: 'Dashboard', icon: LayoutDashboard, path: '/admin' },
     { name: 'POS', icon: ShoppingCart, path: '/admin/pos' },
@@ -91,48 +144,62 @@ function AdminDashboardPage() {
     { name: 'Settings', icon: Settings, path: '/admin/settings' },
   ];
 
-  // Logout Handler
+  // Logout
   const handleLogout = () => {
-    localStorage.removeItem("user");
-    sessionStorage.removeItem("user");
-    navigate("/login");
+    try {
+      localStorage.removeItem("user");
+      sessionStorage.removeItem("user");
+      navigate("/login");
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
   };
 
-  // Render selected page (activeItem is maintained by URL)
+  // Render content safely
   const renderContent = () => {
-    switch (activeItem) {
-      case 'Dashboard':
-        return <DashboardContent openModal={openModal} />;
+    try {
+      switch (activeItem) {
+        case 'Dashboard':
+          return <DashboardContent openModal={openModal} />;
 
-      case 'Menu':
-        return <MenuManagement openModal={openModal} />;
+        case 'Menu':
+          return <MenuManagement openModal={openModal} />;
 
-      case 'Pos':
-        return <POS openModal={openModal} isAdmin={true} />;   // ⭐ Modal support
+        case 'POS':
+          return <POS openModal={openModal} isAdmin={true} />;
 
-      case 'Inventory':
-        return <InventoryManagement openModal={openModal} />;
-      case 'Chat Room':
-        return <ChatRoomPage openModal={openModal} />;
-      case 'Cashiers':
-        return <CashierManagement openModal={openModal} />;
-      case 'Reports':
-        return <AdminReportPage openModal={openModal} />;
-      case 'Transactions':
-        return <Records />;
+        case 'Inventory':
+          return <InventoryManagement openModal={openModal} />;
 
-      case 'Logs':
-        return <LogManagement openModal={openModal} />;
+        case 'Chat Room':
+          return <ChatRoomPage openModal={openModal} />;
 
-      case 'Settings':
-        return <AdminSettingsPage openModal={openModal} />;
+        case 'Cashiers':
+          return <CashierManagement openModal={openModal} />;
 
-      case 'Logout':
-        handleLogout();
-        return null;
+        case 'Reports':
+          return <AdminReportPage openModal={openModal} />;
 
-      default:
-        return <PlaceholderPage title="404 - Page Not Found" />;
+        case 'Transactions':
+          return <Records />;
+
+        case 'Logs':
+          return <LogManagement openModal={openModal} />;
+
+        case 'Settings':
+          return <AdminSettingsPage openModal={openModal} />;
+
+        case 'Logout':
+          handleLogout();
+          return null;
+
+        default:
+          console.warn("Unknown route:", activeItem);
+          return <PlaceholderPage title="404 - Page Not Found" />;
+      }
+    } catch (error) {
+      console.error("Render error:", error);
+      return <PlaceholderPage title="Error Loading Page" />;
     }
   };
 
@@ -147,7 +214,11 @@ function AdminDashboardPage() {
         activeItem={activeItem}
         setActiveItem={(item, path) => {
           setActiveItem(item);
-          if (path) navigate(path);
+          if (path && typeof path === "string") {
+            navigate(path);
+          } else {
+            console.warn("Invalid path:", path);
+          }
         }}
         onLogout={handleLogout}
       />
@@ -162,16 +233,18 @@ function AdminDashboardPage() {
           initials="AU"
         />
 
-        {/* Page Content */}
+        {/* Content with Error Boundary */}
         <main className="flex-1 overflow-y-auto p-6">
-          {renderContent()}
+          <ErrorBoundary>
+            {renderContent()}
+          </ErrorBoundary>
         </main>
 
       </div>
 
-      {/* 🌟 GLOBAL MODAL (Reusable Everywhere) */}
+      {/* GLOBAL MODAL */}
       <Modal isOpen={isModalOpen} onClose={closeModal}>
-        {modalContent}
+        {modalContent ? modalContent : <div>No content</div>}
       </Modal>
 
     </div>
