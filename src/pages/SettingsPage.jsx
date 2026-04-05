@@ -4,10 +4,63 @@ import { Eye, EyeOff } from 'lucide-react';
 
 export default function SimpleSettings() {
   const [showPassword, setShowPassword] = useState(false);
-  const [bugReport, setBugReport] = useState('');
-  const [feedback, setFeedback] = useState('');
+  const [reportType, setReportType] = useState('bug');
+  const [message, setMessage] = useState('');
+  const [screenshot, setScreenshot] = useState(null);
   const [pinCode, setPinCode] = useState('');
   const [roleId, setRoleId] = useState(null); // store user's role
+
+  const handleReportSubmit = async (event) => {
+    event.preventDefault();
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Please log in first');
+        return;
+      }
+
+      // Decode JWT to get user_id
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const user_id = payload.user_id;
+
+      // Prepare feedback data
+      const feedbackData = {
+        user_id,
+        type: reportType,
+        message,
+        system_name: navigator.userAgent,
+        // screenshot_url will be added later when file upload is implemented
+      };
+
+      // Call the feedback API
+      const response = await fetch(`${API_BASE_URL}/api/feedback`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(feedbackData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to submit feedback');
+      }
+
+      const result = await response.json();
+      console.log('Feedback submitted:', result);
+
+      // Reset form
+      setMessage('');
+      setScreenshot(null);
+      setReportType('bug');
+
+      alert('Thank you! Your feedback has been submitted successfully.');
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+      alert(`Failed to send feedback: ${error.message}`);
+    }
+  };
 
   // Fetch user info (role) and pin code if admin
   useEffect(() => {
@@ -102,40 +155,69 @@ export default function SimpleSettings() {
 
         {/* Right Column */}
         <div className="flex-1 p-8">
-          <div className="mt-16">
-            {/* Bug Reports */}
-            <div className="bg-white rounded-lg p-6 shadow-sm mb-6">
-              <h2 className="text-base font-bold mb-1">Bug Reports</h2>
-              <p className="text-xs text-gray-600 mb-4">
-                Found bug/s or errors? Please let your managers know, and send us a report.
-              </p>
-              <textarea
-                value={bugReport}
-                onChange={(e) => setBugReport(e.target.value)}
-                placeholder="Enter your report here and specify where the bug was found."
-                className="w-full border border-gray-300 rounded p-3 text-sm outline-none focus:ring-1 focus:ring-emerald-700 resize-none h-24 mb-4"
-              />
-              <button className="w-full py-2 bg-emerald-700 text-white text-sm rounded font-semibold hover:bg-emerald-800">
-                Submit bug report
-              </button>
-            </div>
+          <div className="mt-16 bg-white rounded-lg p-6 shadow-sm">
+            <h2 className="text-base font-bold mb-1">Report an Issue or Send Feedback</h2>
+            <p className="text-xs text-gray-600 mb-4">
+              Choose the type then describe your message. Attach an optional screenshot or image.
+            </p>
 
-            {/* Feedback */}
-            <div className="bg-white rounded-lg p-6 shadow-sm">
-              <h2 className="text-base font-bold mb-1">Got any Feedback or Suggestions?</h2>
-              <p className="text-xs text-gray-600 mb-4">
-                Feedback on the system's performance is always welcomed! Let us work together to improve overall performance.
-              </p>
-              <textarea
-                value={feedback}
-                onChange={(e) => setFeedback(e.target.value)}
-                placeholder="Enter your feedback/suggestions here. We'd love to hear your opinions!"
-                className="w-full border border-gray-300 rounded p-3 text-sm outline-none focus:ring-1 focus:ring-emerald-700 resize-none h-24 mb-4"
-              />
-              <button className="w-full py-2 bg-emerald-700 text-white text-sm rounded font-semibold hover:bg-emerald-800">
-                Send us your feedback
+            <form onSubmit={handleReportSubmit}>
+              <div className="mb-4">
+                <div className="flex items-center gap-4">
+                  <label className="inline-flex items-center gap-2 text-sm">
+                    <input
+                      type="radio"
+                      name="reportType"
+                      value="bug"
+                      checked={reportType === 'bug'}
+                      onChange={(e) => setReportType(e.target.value)}
+                    />
+                    Bug Report
+                  </label>
+                  <label className="inline-flex items-center gap-2 text-sm">
+                    <input
+                      type="radio"
+                      name="reportType"
+                      value="feedback"
+                      checked={reportType === 'feedback'}
+                      onChange={(e) => setReportType(e.target.value)}
+                    />
+                    Feedback
+                  </label>
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Message</label>
+                <textarea
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Enter your message here"
+                  className="w-full border border-gray-300 rounded p-3 text-sm outline-none focus:ring-1 focus:ring-emerald-700 resize-none h-28"
+                  required
+                />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Attach Image (optional)</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setScreenshot(e.target.files?.[0] || null)}
+                  className="w-full text-sm"
+                />
+                {screenshot && (
+                  <p className="text-xs text-gray-600 mt-2">Selected: {screenshot.name}</p>
+                )}
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-2 bg-emerald-700 text-white text-sm rounded font-semibold hover:bg-emerald-800"
+              >
+                Submit
               </button>
-            </div>
+            </form>
           </div>
         </div>
 
