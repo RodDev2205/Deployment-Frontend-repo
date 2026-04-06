@@ -21,7 +21,7 @@ const Sidebar = ({
     <div className="w-64 bg-white text-gray-800 flex flex-col shadow-lg h-screen">
 
       {/* Logo */}
-      <div className="p-6 border-b border-gray-200 flex justify-center">
+      <div className="p-6 border-b border-gray-200 flex items-center justify-center">
         <img 
           src={logo} 
           alt="App Logo" 
@@ -30,7 +30,7 @@ const Sidebar = ({
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4">
+      <nav className="flex-1 p-4 overflow-y-auto">
         {navItems.map((item) => {
           const isActive = activeItem === item.name;
           const Icon = item.icon;

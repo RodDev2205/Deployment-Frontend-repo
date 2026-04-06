@@ -7,6 +7,7 @@ export default function SimpleSettings() {
   const [screenshot, setScreenshot] = useState(null);
   const [roleId, setRoleId] = useState(null);
   const [pinCode, setPinCode] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleReportSubmit = async (event) => {
     event.preventDefault();
@@ -89,7 +90,70 @@ export default function SimpleSettings() {
   }, []);
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 pb-20 ${roleId === 1 ? 'h-screen overflow-y-auto' : ''}`}>
+      {/* Profile Settings Section */}
+      <div className="bg-white rounded-lg p-6 shadow-sm">
+        <h2 className="text-base font-bold mb-1">Profile Settings</h2>
+        <p className="text-xs text-gray-600 mb-6">Queries, bug reports, and customization</p>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Username:</label>
+            <input
+              type="text"
+              placeholder="cashier12"
+              className="w-full border border-gray-300 rounded p-3 text-sm outline-none focus:ring-1 focus:ring-emerald-700 bg-gray-50"
+              readOnly={roleId !== 2 && roleId !== 3}
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Password:</label>
+            <div className="flex items-center gap-2">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                placeholder="••••••••"
+                className="flex-1 border border-gray-300 rounded p-3 text-sm outline-none focus:ring-1 focus:ring-emerald-700 bg-gray-50"
+                readOnly={roleId !== 2 && roleId !== 3}
+              />
+              <button 
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="p-2 text-gray-400 hover:text-gray-600"
+              >
+                {showPassword ? (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3l18 18" />
+                  </svg>
+                )}
+              </button>
+            </div>
+          </div>
+          
+          {roleId === 2 || roleId === 3 ? (
+            <button className="w-full py-2 bg-emerald-700 text-white text-sm rounded font-semibold hover:bg-emerald-800">
+              Update Username and Password
+            </button>
+          ) : (
+            <>
+              <button disabled className="w-full py-2 bg-emerald-700 text-white text-sm rounded font-semibold opacity-70 cursor-not-allowed">
+                Cannot Edit
+              </button>
+              <p className="text-xs text-gray-600">
+                Username and Password can only be edited by your branch manager. For any concerns please contact them.
+              </p>
+            </>
+          )}
+        </div>
+      </div>
+
       <div className="flex gap-6">
         {/* Feedback Section */}
         <div className="flex-1 bg-white rounded-lg p-6 shadow-sm">
