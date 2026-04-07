@@ -8,6 +8,11 @@ export default function SimpleSettings() {
   const [roleId, setRoleId] = useState(null);
   const [pinCode, setPinCode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [contactNumber, setContactNumber] = useState('');
+  const [username, setUsername] = useState('');
+  const [newPassword, setNewPassword] = useState('');
 
   const handleReportSubmit = async (event) => {
     event.preventDefault();
@@ -61,15 +66,76 @@ export default function SimpleSettings() {
     }
   };
 
-  // Fetch pin_code if admin
+  const handleUpdateProfile = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Please log in first');
+        return;
+      }
+
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const userId = payload.user_id;
+
+      const updateData = {
+        first_name: firstName,
+        last_name: lastName,
+        contact_number: contactNumber,
+        username,
+      };
+
+      if (newPassword.trim()) {
+        updateData.password = newPassword;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/users/user/${userId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(updateData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update profile');
+      }
+
+      const result = await response.json();
+      console.log('Profile updated:', result);
+
+      // Reset password field
+      setNewPassword('');
+
+      alert('Profile updated successfully!');
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      alert(`Failed to update profile: ${error.message}`);
+    }
+  };
+
+  // Fetch pin_code if admin and user profile
   useEffect(() => {
-    const fetchPinCode = async () => {
+    const fetchData = async () => {
       try {
         const token = localStorage.getItem('token');
         if (!token) return;
 
         const payload = JSON.parse(atob(token.split('.')[1]));
         setRoleId(payload.role_id);
+
+        // Fetch user profile
+        const userRes = await fetch(`${API_BASE_URL}/api/users/user/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          setFirstName(userData.first_name || '');
+          setLastName(userData.last_name || '');
+          setContactNumber(userData.contact_number || '');
+          setUsername(userData.username || '');
+        }
 
         // Only fetch pin_code for admins (role_id === 2)
         if (payload.role_id === 2) {
@@ -82,11 +148,11 @@ export default function SimpleSettings() {
           }
         }
       } catch (error) {
-        console.error('Error fetching pin code:', error);
+        console.error('Error fetching data:', error);
       }
     };
 
-    fetchPinCode();
+    fetchData();
   }, []);
 
   return (
@@ -98,21 +164,57 @@ export default function SimpleSettings() {
         
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Username:</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">First Name:</label>
             <input
               type="text"
-              placeholder="cashier12"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
               className="w-full border border-gray-300 rounded p-3 text-sm outline-none focus:ring-1 focus:ring-emerald-700 bg-gray-50"
               readOnly={roleId !== 2 && roleId !== 3}
             />
           </div>
           
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Password:</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Last Name:</label>
+            <input
+              type="text"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              className="w-full border border-gray-300 rounded p-3 text-sm outline-none focus:ring-1 focus:ring-emerald-700 bg-gray-50"
+              readOnly={roleId !== 2 && roleId !== 3}
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Contact Number:</label>
+            <input
+              type="text"
+              value={contactNumber}
+              onChange={(e) => setContactNumber(e.target.value)}
+              className="w-full border border-gray-300 rounded p-3 text-sm outline-none focus:ring-1 focus:ring-emerald-700 bg-gray-50"
+              readOnly={roleId !== 2 && roleId !== 3}
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Username:</label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full border border-gray-300 rounded p-3 text-sm outline-none focus:ring-1 focus:ring-emerald-700 bg-gray-50"
+              readOnly={roleId !== 2 && roleId !== 3}
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">New Password:</label>
             <div className="flex items-center gap-2">
               <input
                 type={showPassword ? 'text' : 'password'}
-                placeholder="••••••••"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter new password (leave empty to keep current)"
                 className="flex-1 border border-gray-300 rounded p-3 text-sm outline-none focus:ring-1 focus:ring-emerald-700 bg-gray-50"
                 readOnly={roleId !== 2 && roleId !== 3}
               />
@@ -138,8 +240,11 @@ export default function SimpleSettings() {
           </div>
           
           {roleId === 2 || roleId === 3 ? (
-            <button className="w-full py-2 bg-emerald-700 text-white text-sm rounded font-semibold hover:bg-emerald-800">
-              Update Username and Password
+            <button 
+              onClick={handleUpdateProfile}
+              className="w-full py-2 bg-emerald-700 text-white text-sm rounded font-semibold hover:bg-emerald-800"
+            >
+              Update Profile
             </button>
           ) : (
             <>
@@ -147,7 +252,7 @@ export default function SimpleSettings() {
                 Cannot Edit
               </button>
               <p className="text-xs text-gray-600">
-                Username and Password can only be edited by your branch manager. For any concerns please contact them.
+                Profile can only be edited by your branch manager or super admin. For any concerns please contact them.
               </p>
             </>
           )}
