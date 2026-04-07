@@ -79,6 +79,12 @@ export default function SimpleSettings() {
       const payload = JSON.parse(atob(token.split('.')[1]));
       const userId = payload.user_id;
 
+      // Prevent superadmins from updating passwords
+      if (payload.role_id === 3 && newPassword.trim()) {
+        alert('Superadmins cannot change their password through this interface');
+        return;
+      }
+
       const updateData = {
         first_name: firstName,
         last_name: lastName,
@@ -224,12 +230,13 @@ export default function SimpleSettings() {
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="Enter new password (leave empty to keep current)"
                 className="flex-1 border border-gray-300 rounded p-3 text-sm outline-none focus:ring-1 focus:ring-emerald-700 bg-gray-50"
-                readOnly={roleId !== 2 && roleId !== 3}
+                readOnly={roleId !== 2}
               />
               <button 
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="p-2 text-gray-400 hover:text-gray-600"
+                disabled={roleId === 3}
               >
                 {showPassword ? (
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -256,12 +263,13 @@ export default function SimpleSettings() {
                 onChange={(e) => setOldPassword(e.target.value)}
                 placeholder="Enter current password"
                 className="flex-1 border border-gray-300 rounded p-3 text-sm outline-none focus:ring-1 focus:ring-emerald-700 bg-gray-50"
-                readOnly={roleId !== 2 && roleId !== 3}
+                readOnly={roleId !== 2}
               />
               <button 
                 type="button"
                 onClick={() => setShowOldPassword(!showOldPassword)}
                 className="p-2 text-gray-400 hover:text-gray-600"
+                disabled={roleId === 3}
               >
                 {showOldPassword ? (
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
