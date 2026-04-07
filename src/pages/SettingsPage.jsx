@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import API_BASE_URL from '../config/api';
+import { useAlert } from '../context/AlertContext';
 
 export default function SimpleSettings() {
+  const { success, error } = useAlert();
   const [reportType, setReportType] = useState('bug');
   const [message, setMessage] = useState('');
   const [screenshot, setScreenshot] = useState(null);
@@ -81,7 +83,7 @@ export default function SimpleSettings() {
 
       // Prevent superadmins from updating passwords
       if (payload.role_id === 3 && newPassword.trim()) {
-        alert('Superadmins cannot change their password through this interface');
+        error('Access Denied', 'Superadmins cannot change their password through this interface');
         return;
       }
 
@@ -94,7 +96,7 @@ export default function SimpleSettings() {
 
       if (newPassword.trim()) {
         if (!oldPassword.trim()) {
-          alert('Please enter your current password to change it');
+          error('Current Password Required', 'Please enter your current password to change it');
           return;
         }
         updateData.password = newPassword;
@@ -122,10 +124,10 @@ export default function SimpleSettings() {
       setOldPassword('');
       setNewPassword('');
 
-      alert('Profile updated successfully!');
+      success('Profile Updated', 'Your profile has been updated successfully!');
     } catch (error) {
       console.error('Error updating profile:', error);
-      alert(`Failed to update profile: ${error.message}`);
+      error('Update Failed', `Failed to update profile: ${error.message}`);
     }
   };
 
