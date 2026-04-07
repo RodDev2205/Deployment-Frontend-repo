@@ -12,6 +12,7 @@ export default function SimpleSettings() {
   const [lastName, setLastName] = useState('');
   const [contactNumber, setContactNumber] = useState('');
   const [username, setUsername] = useState('');
+  const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
 
   const handleReportSubmit = async (event) => {
@@ -85,7 +86,12 @@ export default function SimpleSettings() {
       };
 
       if (newPassword.trim()) {
+        if (!oldPassword.trim()) {
+          alert('Please enter your current password to change it');
+          return;
+        }
         updateData.password = newPassword;
+        updateData.old_password = oldPassword;
       }
 
       const response = await fetch(`${API_BASE_URL}/api/users/user/${userId}`, {
@@ -105,7 +111,8 @@ export default function SimpleSettings() {
       const result = await response.json();
       console.log('Profile updated:', result);
 
-      // Reset password field
+      // Reset password fields
+      setOldPassword('');
       setNewPassword('');
 
       alert('Profile updated successfully!');
@@ -238,6 +245,20 @@ export default function SimpleSettings() {
               </button>
             </div>
           </div>
+          
+          {newPassword.trim() && (
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Current Password:</label>
+              <input
+                type="password"
+                value={oldPassword}
+                onChange={(e) => setOldPassword(e.target.value)}
+                placeholder="Enter current password"
+                className="w-full border border-gray-300 rounded p-3 text-sm outline-none focus:ring-1 focus:ring-emerald-700 bg-gray-50"
+                required
+              />
+            </div>
+          )}
           
           {roleId === 2 || roleId === 3 ? (
             <button 
