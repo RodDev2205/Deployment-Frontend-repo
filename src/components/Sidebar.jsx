@@ -30,7 +30,7 @@ const Sidebar = ({
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 overflow-y-auto">
+      <nav className="flex-1 p-2 overflow-y-auto">
         {navItems.map((item) => {
           const isActive = activeItem === item.name;
           const Icon = item.icon;
