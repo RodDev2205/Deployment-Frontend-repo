@@ -63,7 +63,15 @@ export default function ViewBranchModal({ isOpen, onClose, branch }) {
             <InfoItem label="Location" value={branch.locationText || "No saved location"} />
             <InfoItem label="Opening Time" value={formatTime(branch.openingTime)} />
             <InfoItem label="Closing Time" value={formatTime(branch.closingTime)} />
-            <InfoItem label="Status" value={branch.status || "Active"} />
+            <InfoItem label="Status" value={
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                branch.status === 'active'
+                  ? 'bg-green-100 text-green-800'
+                  : 'bg-red-100 text-red-800'
+              }`}>
+                {branch.status === 'active' ? 'Active' : 'Deactivated'}
+              </span>
+            } />
             <InfoItem label="Created By" value={branch.createdBy || "--"} />
           </div>
         </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import API_BASE_URL from '../../config/api';
-import { Store, Eye, FilePenLine } from "lucide-react";
+import { Store, Eye, FilePenLine, Power, PowerOff } from "lucide-react";
 import AddBranchModal from "./AddBranches";
 import ViewBranchModal from "./ViewBranchModal";
 import EditBranchModal from "./EditBranchModal";
@@ -15,6 +15,7 @@ export default function BranchList() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const [selectedBranch, setSelectedBranch] = useState(null);
+  const [userRole, setUserRole] = useState(null);
 
   //  FETCH WITH FULL ERROR HANDLING
   const fetchBranches = async () => {
@@ -55,6 +56,9 @@ export default function BranchList() {
 
   useEffect(() => {
     fetchBranches();
+    // Get user role from localStorage
+    const role = localStorage.getItem('role_id');
+    setUserRole(role ? Number(role) : null);
   }, []);
 
   //  SAFE HANDLERS
@@ -73,6 +77,36 @@ export default function BranchList() {
       setIsEditModalOpen(false);
     } catch (err) {
       console.error("Edit branch error:", err);
+    }
+  };
+
+  const handleToggleBranchStatus = async (branchId) => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setError("No authentication token found.");
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/branches/${branchId}/toggle-status`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to toggle branch status");
+      }
+
+      // Refresh branches list
+      fetchBranches();
+    } catch (err) {
+      console.error("Toggle branch status error:", err);
+      setError(err.message || "Failed to toggle branch status");
     }
   };
 
@@ -165,6 +199,15 @@ export default function BranchList() {
                       {branch.name || branch.branchName || "Unnamed Branch"}
                     </h3>
 
+                    {/* Status Badge */}
+                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                      branch.status === 'active'
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                      {branch.status === 'active' ? 'Active' : 'Deactivated'}
+                    </span>
+
                     <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
                       {formatTime(branch.openingTime)} -{" "}
                       {formatTime(branch.closingTime)}
@@ -186,6 +229,7 @@ export default function BranchList() {
                       setIsViewModalOpen(true);
                     }}
                     className="rounded border border-green-600 p-2 text-green-600 hover:bg-green-50 flex items-center justify-center"
+                    title="View Branch"
                   >
                     <Eye className="w-5 h-5" />
                   </button>
@@ -197,9 +241,29 @@ export default function BranchList() {
                       setIsEditModalOpen(true);
                     }}
                     className="rounded border border-green-600 p-2 text-green-600 hover:bg-green-50 flex items-center justify-center"
+                    title="Edit Branch"
                   >
                     <FilePenLine className="w-5 h-5" />
                   </button>
+
+                  {/* TOGGLE STATUS - Only for Superadmin (role_id = 3) */}
+                  {userRole === 3 && (
+                    <button
+                      onClick={() => handleToggleBranchStatus(branch.branch_id)}
+                      className={`rounded border p-2 flex items-center justify-center ${
+                        branch.status === 'active'
+                          ? 'border-red-600 text-red-600 hover:bg-red-50'
+                          : 'border-green-600 text-green-600 hover:bg-green-50'
+                      }`}
+                      title={branch.status === 'active' ? 'Deactivate Branch' : 'Activate Branch'}
+                    >
+                      {branch.status === 'active' ? (
+                        <PowerOff className="w-5 h-5" />
+                      ) : (
+                        <Power className="w-5 h-5" />
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
