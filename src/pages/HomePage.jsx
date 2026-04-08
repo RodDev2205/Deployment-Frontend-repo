@@ -110,7 +110,7 @@ export default function HomePage() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
                 <button 
-                  onClick={() => window.open('https://expo.dev/artifacts/eas/9rSMSn9RXSvUEBDiSBCZ.apk', '_blank')}
+                  onClick={() => window.open('https://expo.dev/artifacts/eas/4HE6rEM9n3exnTYPBctBy9.apk', '_blank')}
                   className="px-6 md:px-8 py-3 md:py-4 bg-emerald-700 text-white rounded-lg hover:bg-emerald-800 transition-colors font-semibold text-base md:text-lg flex items-center justify-center gap-2"
                 >
                   Download the Mobile App
