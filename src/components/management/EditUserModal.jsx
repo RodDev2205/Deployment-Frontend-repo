@@ -217,10 +217,7 @@ export default function EditUserModal({ isOpen, onClose, user, role, onUpdate })
             </select>
           </div>
 
-          <div className="flex justify-end space-x-2 pt-4">
-            <button type="button" onClick={onClose} className="rounded-lg border px-4 py-2 text-gray-600 hover:bg-gray-100" disabled={loadingSubmit}>
-              Cancel
-            </button>
+          <div className="flex justify-end pt-4">
             <button type="submit" disabled={loadingSubmit} className={`rounded-lg px-4 py-2 font-medium text-white ${loadingSubmit ? "bg-gray-400 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"}`}>
               {loadingSubmit ? "Saving..." : "Save Changes"}
             </button>

@@ -229,15 +229,7 @@ export default function AddAdminModal({ isOpen, onClose, onSubmit }) {
           </div>
 
           {/* Footer */}
-          <div className="flex justify-end space-x-2 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg border px-4 py-2 text-gray-600 hover:bg-gray-100"
-              disabled={loadingSubmit}
-            >
-              Cancel
-            </button>
+          <div className="flex justify-end pt-4">
             <button
               type="submit"
               className={`rounded-lg px-4 py-2 font-medium text-white ${
