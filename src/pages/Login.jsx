@@ -42,7 +42,7 @@ export default function Login() {
       setLoading(false);
 
       if (!response.ok) {
-        if (data.error === 'Deactivated' || response.status === 403) {
+        if (data.error === 'Deactivated' || data.error === 'Branch Deactivated' || response.status === 403) {
           setError(data.message || 'Your account is deactivated.');
         } else {
           setError(data.error || 'Invalid credentials!');
