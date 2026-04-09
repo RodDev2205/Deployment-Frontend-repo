@@ -35,7 +35,7 @@ export default function SimpleSettings() {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
-        alert('Please log in first');
+        error('Authentication Required', 'Please log in first');
         return;
       }
 
@@ -75,77 +75,16 @@ export default function SimpleSettings() {
       setScreenshot(null);
       setReportType('bug');
 
-      alert('Thank you! Your feedback has been submitted successfully.');
+      success('Feedback Submitted', 'Thank you! Your feedback has been submitted successfully.');
     } catch (error) {
       console.error('Error submitting feedback:', error);
-      alert(`Failed to send feedback: ${error.message}`);
+      error('Submission Failed', `Failed to send feedback: ${error.message}`);
     }
   };
 
-  const handleUpdateProfile = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        alert('Please log in first');
-        return;
-      }
-
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      const userId = payload.user_id;
-
-      // Prevent superadmins from updating passwords
-      if (payload.role_id === 3 && newPassword.trim()) {
-        error('Access Denied', 'Superadmins cannot change their password through this interface');
-        return;
-      }
-
-      const updateData = {
-        first_name: firstName,
-        last_name: lastName,
-        contact_number: contactNumber,
-        username,
-      };
-
-      if (newPassword.trim()) {
-        if (!oldPassword.trim()) {
-          error('Current Password Required', 'Please enter your current password to change it');
-          return;
-        }
-        updateData.password = newPassword;
-        updateData.old_password = oldPassword;
-      }
-
-      const response = await fetch(`${API_BASE_URL}/api/users/user/${userId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(updateData)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update profile');
-      }
-
-      const result = await response.json();
-      console.log('Profile updated:', result);
-
-      // Reset password fields
-      setOldPassword('');
-      setNewPassword('');
-
-      success('Profile Updated', 'Your profile has been updated successfully!');
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      error('Update Failed', `Failed to update profile: ${error.message}`);
-    }
-  };
-
-  // Fetch pin_code if admin and user profile
+  // Fetch current user profile and admin PIN on page load
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchProfile = async () => {
       try {
         const token = localStorage.getItem('token');
         if (!token) return;
@@ -153,19 +92,31 @@ export default function SimpleSettings() {
         const payload = JSON.parse(atob(token.split('.')[1]));
         setRoleId(payload.role_id);
 
-        // Fetch user profile
-        const userRes = await fetch(`${API_BASE_URL}/api/users/user/me`, {
+        const response = await fetch(`${API_BASE_URL}/api/users/profile`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        if (userRes.ok) {
-          const userData = await userRes.json();
-          setFirstName(userData.first_name || '');
-          setLastName(userData.last_name || '');
-          setContactNumber(userData.contact_number || '');
-          setUsername(userData.username || '');
+
+        if (!response.ok) {
+          console.error('Failed to load profile', response.status);
+          return;
         }
 
-        // Only fetch pin_code for admins (role_id === 2)
+        const data = await response.json();
+        setUserData({
+          firstName: data.first_name || '',
+          lastName: data.last_name || '',
+          contactNumber: data.contact_number || '',
+          username: data.username || ''
+        });
+        setEditFormData({
+          firstName: data.first_name || '',
+          lastName: data.last_name || '',
+          contactNumber: data.contact_number || '',
+          username: data.username || '',
+          currentPassword: '',
+          newPassword: ''
+        });
+
         if (payload.role_id === 2) {
           const pinRes = await fetch(`${API_BASE_URL}/api/admin/pin-code`, {
             headers: { Authorization: `Bearer ${token}` },
@@ -176,62 +127,68 @@ export default function SimpleSettings() {
           }
         }
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error('Error fetching profile:', error);
       }
     };
 
-    fetchData();
+    fetchProfile();
   }, []);
 
-  // Fetch user data
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) return;
+  const handleEditFormSubmit = async (e) => {
+    e.preventDefault();
 
-        // Decode JWT to get username as fallback
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        const usernameFromToken = payload.username || '';
-
-        const response = await fetch(`${API_BASE_URL}/api/user/profile`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          setUserData({
-            firstName: data.first_name || '',
-            lastName: data.last_name || '',
-            contactNumber: data.contact_number || '',
-            username: data.username || usernameFromToken
-          });
-          setEditFormData({
-            firstName: data.first_name || '',
-            lastName: data.last_name || '',
-            contactNumber: data.contact_number || '',
-            username: data.username || usernameFromToken,
-            currentPassword: '',
-            newPassword: ''
-          });
-        } else {
-          // If API fails, at least show username from token
-          setUserData(prev => ({
-            ...prev,
-            username: usernameFromToken
-          }));
-          setEditFormData(prev => ({
-            ...prev,
-            username: usernameFromToken
-          }));
-        }
-      } catch (error) {
-        console.error('Error fetching user data:', error);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        error('Authentication Required', 'Please log in first');
+        return;
       }
-    };
 
-    fetchUserData();
-  }, []);
+      if (editFormData.newPassword && !editFormData.currentPassword) {
+        error('Current Password Required', 'Please provide your current password to set a new password.');
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/users/profile`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          first_name: editFormData.firstName,
+          last_name: editFormData.lastName,
+          contact_number: editFormData.contactNumber,
+          username: editFormData.username,
+          current_password: editFormData.currentPassword || undefined,
+          new_password: editFormData.newPassword || undefined
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update profile');
+      }
+
+      const updatedData = await response.json();
+      setUserData({
+        firstName: updatedData.user?.first_name || updatedData.first_name || '',
+        lastName: updatedData.user?.last_name || updatedData.last_name || '',
+        contactNumber: updatedData.user?.contact_number || updatedData.contact_number || '',
+        username: updatedData.user?.username || updatedData.username || ''
+      });
+      setShowEditModal(false);
+      setEditFormData(prev => ({
+        ...prev,
+        currentPassword: '',
+        newPassword: ''
+      }));
+      success('Account Updated', 'Your account information has been updated successfully.');
+    } catch (error) {
+      console.error('Error updating user data:', error);
+      error('Update Failed', `Failed to update account: ${error.message}`);
+    }
+  };
 
   // Handle edit modal
   const handleEditClick = () => {
@@ -256,51 +213,6 @@ export default function SimpleSettings() {
       ...prev,
       [name]: value
     }));
-  };
-
-  const handleEditFormSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        alert('Please log in first');
-        return;
-      }
-
-      const response = await fetch(`${API_BASE_URL}/api/user/profile`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          first_name: editFormData.firstName,
-          last_name: editFormData.lastName,
-          contact_number: editFormData.contactNumber,
-          username: editFormData.username,
-          current_password: editFormData.currentPassword || undefined,
-          new_password: editFormData.newPassword || undefined
-        })
-      });
-
-      if (response.ok) {
-        const updatedData = await response.json();
-        setUserData({
-          firstName: updatedData.first_name || '',
-          lastName: updatedData.last_name || '',
-          contactNumber: updatedData.contact_number || '',
-          username: updatedData.username || ''
-        });
-        setShowEditModal(false);
-        alert('Account information updated successfully!');
-      } else {
-        const errorData = await response.json();
-        alert(`Failed to update: ${errorData.error || 'Unknown error'}`);
-      }
-    } catch (error) {
-      console.error('Error updating user data:', error);
-      alert(`Error: ${error.message}`);
-    }
   };
 
   return (
