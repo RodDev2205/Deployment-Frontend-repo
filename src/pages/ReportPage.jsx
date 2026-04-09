@@ -236,9 +236,9 @@ export default function ReportPage() {
     let start = new Date();
     let end = new Date();
     if (range === 'daily') {
-      // Previous day
+      // Previous day (day before yesterday for daily reports)
       start = new Date(today);
-      start.setDate(today.getDate() - 1);
+      start.setDate(today.getDate() - 2);
       end = new Date(start);
     } else if (range === 'weekly') {
       // Previous week (7 days before current week)
@@ -271,7 +271,12 @@ export default function ReportPage() {
     const today = new Date();
     let start = new Date();
     if (range === 'daily') {
+      // For daily reports, show yesterday's completed business day
       start = new Date(today);
+      start.setDate(today.getDate() - 1);
+      const end = new Date(start); // End date is same as start for daily
+      const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      return { startDate: fmt(start), endDate: fmt(end) };
     } else if (range === 'weekly') {
       start.setDate(today.getDate() - 6);
     } else if (range === 'monthly') {
