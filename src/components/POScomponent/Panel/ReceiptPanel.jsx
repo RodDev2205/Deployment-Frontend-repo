@@ -4,6 +4,9 @@ import { ShoppingCart, Trash2, AlertCircle, CheckCircle } from "lucide-react";
 export default function ReceiptPanel({
   cart,
   totalAmount,
+  subtotal,
+  taxRate,
+  taxAmount,
   handleCheckout,
   setCart,
   decrementItem,
@@ -63,8 +66,14 @@ export default function ReceiptPanel({
       <div className="space-y-3 px-6 py-4 border-b border-gray-200">
         <div className="flex justify-between text-sm text-gray-700">
           <span>Subtotal:</span>
-          <span className="font-semibold">₱{totalAmount.toFixed(2)}</span>
+          <span className="font-semibold">₱{subtotal.toFixed(2)}</span>
         </div>
+        {taxRate > 0 && (
+          <div className="flex justify-between text-sm text-gray-700">
+            <span>Tax ({taxRate}%):</span>
+            <span className="font-semibold">₱{taxAmount.toFixed(2)}</span>
+          </div>
+        )}
         <div className="flex justify-between text-sm text-gray-700">
           <span>Discount:</span>
           <span className="font-semibold">None</span>

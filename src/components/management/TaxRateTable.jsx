@@ -24,7 +24,7 @@ export default function TaxRateTable() {
         throw new Error("No authentication token found.");
       }
 
-      const res = await fetch(`${API_BASE_URL}/api/branches/getBranches`, {
+      const res = await fetch(`${API_BASE_URL}/api/branches/getBranchesWithTax`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
