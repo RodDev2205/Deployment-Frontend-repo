@@ -86,6 +86,10 @@ export default function ReportPage() {
   const [menuCurrentPage, setMenuCurrentPage] = useState(1);
   const menuItemsPerPage = 5;
 
+  // Refresh control for live reports
+  const [refreshKey, setRefreshKey] = useState(0);
+  const handleRefresh = () => setRefreshKey((prev) => prev + 1);
+
   // Branch comparison settings
   const [branchViewMode, setBranchViewMode] = useState('top10'); // 'all', 'top10', 'top5'
   const [branchSortBy, setBranchSortBy] = useState('sales'); // 'sales', 'transactions', 'name'
@@ -304,6 +308,13 @@ export default function ReportPage() {
   }, []);
 
   useEffect(() => {
+    const interval = setInterval(() => {
+      setRefreshKey((prev) => prev + 1);
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
     const fetchKpis = async () => {
       try {
         const token = localStorage.getItem('token');
@@ -457,7 +468,7 @@ export default function ReportPage() {
       }
     };
     fetchVoidTransactions();
-  }, [dateRange, selectedBranch]);
+  }, [dateRange, selectedBranch, refreshKey]);
 
   const handleExportPDF = () => {
     const doc = new jsPDF('p', 'pt', 'a4');
@@ -584,6 +595,12 @@ export default function ReportPage() {
             </div>
 
             <div className="flex items-center gap-2">
+              <button
+                onClick={handleRefresh}
+                className="flex items-center gap-2 bg-gray-100 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-200 transition"
+              >
+                Refresh
+              </button>
               <button
                 onClick={handleExportCSV}
                 className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
