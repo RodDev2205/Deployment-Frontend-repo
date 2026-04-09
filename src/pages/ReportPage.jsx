@@ -86,49 +86,132 @@ export default function ReportPage() {
   const [menuCurrentPage, setMenuCurrentPage] = useState(1);
   const menuItemsPerPage = 5;
 
-  // Calculate branch contribution percentages
-  const totalBranchSales = branchComparisonData.reduce((sum, b) => sum + Number(b.total_sales), 0);
-  const branchContribution = branchComparisonData.map((branch, idx) => {
-    const salesNum = Number(branch.total_sales);
-    const percentage = totalBranchSales ? ((salesNum / totalBranchSales) * 100).toFixed(1) : 0;
-    const colors = ['#059669', '#3b82f6', '#f59e0b', '#8b5cf6', '#f65c5c', '#f2ff00', '#63f1d0', '#f97316'];
-    const shortLabel = `br-${branch.branch_id}`; // use short id for slice label
-    return {
-      name: branch.branch_name,
-      shortLabel,
-      value: parseFloat(percentage),
-      color: colors[idx % colors.length],
-      sales: salesNum,
-    };
-  });
+  // Branch comparison settings
+  const [branchViewMode, setBranchViewMode] = useState('top10'); // 'all', 'top10', 'top5'
+  const [branchSortBy, setBranchSortBy] = useState('sales'); // 'sales', 'transactions', 'name'
+  const [branchSortOrder, setBranchSortOrder] = useState('desc'); // 'asc', 'desc'
 
-  // detailed comparison derived from branch comparison data
-  const detailedComparison = branchComparisonData.map((b) => {
-    const revenue = Number(b.total_sales);
-    const tx = Number(b.transaction_count || 0);
-    const prevRevenue = Number(b.prev_sales || 0);
-    const prevDays = Number(b.prev_window_days || 0);
-    // compute growth percentage relative to previous period
-    // handle edge case when previous sales = 0
-    let growthDisplay = 'N/A';
-    if (prevRevenue > 0) {
-      const g = ((revenue - prevRevenue) / prevRevenue) * 100;
-      growthDisplay = `${g.toFixed(1)}%`;
-    } else if (prevRevenue === 0 && revenue > 0) {
-      growthDisplay = '100.0%';
-    } else if (prevRevenue === 0 && revenue === 0) {
-      growthDisplay = '0.0%';
+  // Process branch data based on view mode and sorting
+  const processedBranchData = React.useMemo(() => {
+    let data = [...branchComparisonData];
+
+    // Sort data
+    data.sort((a, b) => {
+      let aVal, bVal;
+      switch (branchSortBy) {
+        case 'sales':
+          aVal = Number(a.total_sales);
+          bVal = Number(b.total_sales);
+          break;
+        case 'transactions':
+          aVal = Number(a.transaction_count || 0);
+          bVal = Number(b.transaction_count || 0);
+          break;
+        case 'name':
+          aVal = a.branch_name.toLowerCase();
+          bVal = b.branch_name.toLowerCase();
+          break;
+        default:
+          aVal = Number(a.total_sales);
+          bVal = Number(b.total_sales);
+      }
+
+      if (branchSortOrder === 'asc') {
+        return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
+      } else {
+        return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
+      }
+    });
+
+    // Filter based on view mode
+    if (branchViewMode === 'top5') {
+      data = data.slice(0, 5);
+    } else if (branchViewMode === 'top10') {
+      data = data.slice(0, 10);
     }
-    return {
-      branch: b.branch_name,
-      monthlyRevenue: revenue,
-      transactions: tx,
-      avgOrder: tx ? Math.round(revenue / tx) : 0,
-      growth: growthDisplay,
-      prevRevenue,
-      prevDays,
-    };
-  });
+    // 'all' keeps all data
+
+    // Add enhanced labels for display
+    return data.map((b, idx) => ({
+      ...b,
+      label: `br-${b.branch_id}`,
+      displayName: `${b.branch_name}`,
+      shortName: b.branch_name.length > 15 ? b.branch_name.substring(0, 12) + '...' : b.branch_name,
+      rank: idx + 1,
+      prev_window_days: b.prev_window_days || 0,
+    }));
+  }, [branchComparisonData, branchViewMode, branchSortBy, branchSortOrder]);
+
+  // Calculate branch contribution percentages with processed data
+  const branchContribution = React.useMemo(() => {
+    const totalBranchSales = processedBranchData.reduce((sum, b) => sum + Number(b.total_sales), 0);
+    const contributions = processedBranchData.map((branch, idx) => {
+      const salesNum = Number(branch.total_sales);
+      const percentage = totalBranchSales ? ((salesNum / totalBranchSales) * 100).toFixed(1) : 0;
+      const colors = ['#059669', '#3b82f6', '#f59e0b', '#8b5cf6', '#f65c5c', '#f2ff00', '#63f1d0', '#f97316', '#84cc16', '#ec4899'];
+      return {
+        name: branch.branch_name,
+        shortName: branch.shortName,
+        value: parseFloat(percentage),
+        color: colors[idx % colors.length],
+        sales: salesNum,
+        rank: branch.rank,
+      };
+    });
+
+    // For pie chart, if we have more than 8 items, group the rest into "Others"
+    if (contributions.length > 8) {
+      const top7 = contributions.slice(0, 7);
+      const others = contributions.slice(7);
+      const othersTotal = others.reduce((sum, item) => sum + item.value, 0);
+      const othersSales = others.reduce((sum, item) => sum + item.sales, 0);
+
+      return [
+        ...top7,
+        {
+          name: 'Others',
+          shortName: 'Others',
+          value: parseFloat(othersTotal.toFixed(1)),
+          color: '#6b7280',
+          sales: othersSales,
+          rank: 99,
+        }
+      ];
+    }
+
+    return contributions;
+  }, [processedBranchData]);
+
+  // detailed comparison derived from processed branch comparison data
+  const detailedComparison = React.useMemo(() => {
+    return processedBranchData.map((b) => {
+      const revenue = Number(b.total_sales);
+      const tx = Number(b.transaction_count || 0);
+      const prevRevenue = Number(b.prev_sales || 0);
+      const prevDays = Number(b.prev_window_days || 0);
+      // compute growth percentage relative to previous period
+      // handle edge case when previous sales = 0
+      let growthDisplay = 'N/A';
+      if (prevRevenue > 0) {
+        const g = ((revenue - prevRevenue) / prevRevenue) * 100;
+        growthDisplay = `${g.toFixed(1)}%`;
+      } else if (prevRevenue === 0 && revenue > 0) {
+        growthDisplay = '100.0%';
+      } else if (prevRevenue === 0 && revenue === 0) {
+        growthDisplay = '0.0%';
+      }
+      return {
+        branch: b.branch_name,
+        monthlyRevenue: revenue,
+        transactions: tx,
+        avgOrder: tx ? Math.round(revenue / tx) : 0,
+        growth: growthDisplay,
+        prevRevenue,
+        prevDays,
+        rank: b.rank,
+      };
+    });
+  }, [processedBranchData]);
 
 
 
@@ -321,14 +404,8 @@ export default function ReportPage() {
         });
         if (!res.ok) throw new Error('Failed to fetch branch comparison');
         const data = await res.json();
-        // add a short identifier label for x-axis and a combined display name
-        const enhanced = (data || []).map((b) => ({
-          ...b,
-          label: `br-${b.branch_id}`,
-          displayName: `br-${b.branch_id} - ${b.branch_name}`,
-          prev_window_days: b.prev_window_days || 0,
-        }));
-        setBranchComparisonData(enhanced);
+        // Store raw data - processing will happen in useMemo
+        setBranchComparisonData(data || []);
       } catch (err) {
         console.error('Failed to load branch comparison', err);
       }
@@ -572,18 +649,52 @@ export default function ReportPage() {
 
         {/* Branch Comparison Bar Chart & Payment Breakdown Pie */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Branch Comparison */}
+          {/* Branch Comparison Controls */}
           <div className="bg-white rounded-2xl shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Branch Comparison</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Branch Comparison</h2>
+              <div className="flex items-center gap-2 text-sm">
+                <select
+                  value={branchViewMode}
+                  onChange={(e) => setBranchViewMode(e.target.value)}
+                  className="border border-gray-300 rounded px-2 py-1 text-xs"
+                >
+                  <option value="all">All Branches</option>
+                  <option value="top10">Top 10</option>
+                  <option value="top5">Top 5</option>
+                </select>
+                <select
+                  value={branchSortBy}
+                  onChange={(e) => setBranchSortBy(e.target.value)}
+                  className="border border-gray-300 rounded px-2 py-1 text-xs"
+                >
+                  <option value="sales">Sort by Sales</option>
+                  <option value="transactions">Sort by Transactions</option>
+                  <option value="name">Sort by Name</option>
+                </select>
+                <button
+                  onClick={() => setBranchSortOrder(branchSortOrder === 'desc' ? 'asc' : 'desc')}
+                  className="border border-gray-300 rounded px-2 py-1 text-xs hover:bg-gray-50"
+                >
+                  {branchSortOrder === 'desc' ? '↓' : '↑'}
+                </button>
+              </div>
+            </div>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={branchComparisonData}>
+              <BarChart data={processedBranchData}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="label" />
+                <XAxis
+                  dataKey="label"
+                  angle={-45}
+                  textAnchor="end"
+                  height={80}
+                  interval={0}
+                />
                 <YAxis />
                 <Tooltip
                   formatter={(value) => `₱${Number(value).toLocaleString()}`}
                   labelFormatter={(label) => {
-                    const match = branchComparisonData.find(b => b.label === label);
+                    const match = processedBranchData.find(b => b.label === label);
                     return match ? match.displayName : label;
                   }}
                 />
@@ -591,6 +702,9 @@ export default function ReportPage() {
                 <Bar dataKey="total_sales" fill="#059669" name="Sales" />
               </BarChart>
             </ResponsiveContainer>
+            <div className="mt-2 text-xs text-gray-500 text-center">
+              Showing {processedBranchData.length} of {branchComparisonData.length} branches
+            </div>
           </div>
 
           {/* Branch Contribution Pie Chart */}
@@ -605,31 +719,44 @@ export default function ReportPage() {
                   cx="50%"
                   cy="50%"
                   outerRadius={100}
-                  // no labels on slices; legend will show identifiers instead
-                  label={false}
+                  label={({ name, value }) => `${name}: ${value}%`}
+                  labelLine={false}
                 >
                   {branchContribution.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
                 <Tooltip formatter={(value) => `${value.toFixed(1)}%`} />
-                <Legend formatter={(name, entry) => {
-                    // find branch by name to get shortLabel prefix
+                <Legend
+                  formatter={(name, entry) => {
                     const match = branchContribution.find(b => b.name === name);
-                    return match ? `${match.shortLabel} - ${name}` : name;
-                }} />
+                    return match ? `${name} (${match.value.toFixed(1)}%)` : name;
+                  }}
+                  wrapperStyle={{ fontSize: '12px' }}
+                />
               </PieChart>
             </ResponsiveContainer>
+            {branchContribution.length > 8 && (
+              <div className="mt-2 text-xs text-gray-500 text-center">
+                Top 7 branches shown individually, others grouped as "Others"
+              </div>
+            )}
           </div>
         </div>
 
         {/* Detailed Comparison Table */}
         <div className="bg-white rounded-2xl shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Detailed Branch Comparison{comparisonNote}</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Detailed Branch Comparison{comparisonNote}</h2>
+            <div className="text-sm text-gray-600">
+              Showing {detailedComparison.length} of {branchComparisonData.length} branches
+            </div>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-gray-200">
+                  <th className="px-4 py-3 text-sm font-semibold text-gray-900">#</th>
                   <th className="px-4 py-3 text-sm font-semibold text-gray-900">Branch</th>
                   <th className="px-4 py-3 text-sm font-semibold text-gray-900">Monthly Revenue</th>
                   <th className="px-4 py-3 text-sm font-semibold text-gray-900">Transactions</th>
@@ -640,6 +767,7 @@ export default function ReportPage() {
               <tbody>
                 {detailedComparison.map((row, idx) => (
                   <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50 transition">
+                    <td className="px-4 py-3 text-sm font-medium text-gray-500">{row.rank}</td>
                     <td className="px-4 py-3 text-sm font-medium text-gray-900">{row.branch}</td>
                     <td className="px-4 py-3 text-sm text-gray-600">₱{row.monthlyRevenue.toLocaleString()}</td>
                     <td className="px-4 py-3 text-sm text-gray-600">{row.transactions.toLocaleString()}</td>
