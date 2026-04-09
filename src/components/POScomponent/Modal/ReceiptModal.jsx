@@ -110,8 +110,8 @@ export default function ReceiptModal({
           <span>Subtotal:</span>
           <span>₱ {subtotal.toFixed(2)}</span>
         </div>
-        <div className="flex justify-between text-gray-700">
-          <span>Tax ({taxRate}%)</span>
+        <div className="flex justify-between text-emerald-600 font-medium">
+          <span>Tax ({Number(taxRate).toFixed(2)}%)</span>
           <span>₱ {taxAmount.toFixed(2)}</span>
         </div>
         <div className="border-t pt-2 flex justify-between font-bold text-base">

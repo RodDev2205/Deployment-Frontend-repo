@@ -55,13 +55,15 @@ export default function POSCashier({ isCashier, isAdmin }) {
 
         if (response.ok) {
           const data = await response.json();
-          setTaxRate(parseFloat(data.tax_rate) || 0);
+          const rate = Number(data.tax_rate) || 0;
+          console.log("✅ Tax rate fetched:", rate);
+          setTaxRate(rate);
         } else {
-          console.warn("Failed to fetch tax rate, using 0%", response.status);
+          console.warn("⚠️ Failed to fetch tax rate, status:", response.status);
           setTaxRate(0);
         }
       } catch (error) {
-        console.error("Error fetching tax rate:", error);
+        console.error("❌ Error fetching tax rate:", error);
         setTaxRate(0);
       }
     };

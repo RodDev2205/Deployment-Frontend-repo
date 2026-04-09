@@ -68,12 +68,10 @@ export default function ReceiptPanel({
           <span>Subtotal:</span>
           <span className="font-semibold">₱{subtotal.toFixed(2)}</span>
         </div>
-        {taxRate > 0 && (
-          <div className="flex justify-between text-sm text-gray-700">
-            <span>Tax ({taxRate}%):</span>
-            <span className="font-semibold">₱{taxAmount.toFixed(2)}</span>
-          </div>
-        )}
+        <div className="flex justify-between text-sm text-gray-700">
+          <span>Tax ({Number(taxRate).toFixed(2)}%):</span>
+          <span className="font-semibold text-emerald-600">₱{taxAmount.toFixed(2)}</span>
+        </div>
         <div className="flex justify-between items-center pt-2 border-t border-gray-200">
           <span className="font-bold text-gray-900">Total</span>
           <div className="bg-emerald-600 text-white rounded-lg px-3 py-2 font-bold text-lg">

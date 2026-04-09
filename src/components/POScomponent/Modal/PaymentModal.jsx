@@ -115,8 +115,8 @@ export default function PaymentModal({ subtotal = 0, taxRate = 0, taxAmount = 0,
               </span>
             </div>
 
-            <div className="flex justify-between">
-              <span className="text-gray-600">Tax ({taxRate}%)</span>
+            <div className="flex justify-between text-emerald-600">
+              <span className="font-medium">Tax ({Number(taxRate).toFixed(2)}%)</span>
               <span className="font-semibold">
                 ₱{safeTaxAmount.toFixed(2)}
               </span>
