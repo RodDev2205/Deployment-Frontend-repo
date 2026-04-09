@@ -57,31 +57,7 @@ export default function POSCashier({ isCashier, isAdmin }) {
           const data = await response.json();
           setTaxRate(parseFloat(data.tax_rate) || 0);
         } else {
-          console.warn("Failed to fetch tax rate, using 0%");
-          setTaxRate(0);
-        }
-      } catch (error) {
-        console.error("Error fetching tax rate:", error);
-        setTaxRate(0);
-      }
-    };
-
-    fetchTaxRate();
-  }, []);
-
-  // ================== FETCH TAX RATE ==================
-  useEffect(() => {
-    const fetchTaxRate = async () => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/branches/current/tax-rate`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          setTaxRate(parseFloat(data.tax_rate) || 0);
-        } else {
-          console.warn("Failed to fetch tax rate, using 0%");
+          console.warn("Failed to fetch tax rate, using 0%", response.status);
           setTaxRate(0);
         }
       } catch (error) {
