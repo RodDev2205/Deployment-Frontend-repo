@@ -5,6 +5,9 @@ import { printReceipt } from '../../../utils/printUtils';
 export default function ReceiptModal({
   transactionId,
   transactionNumber,
+  subtotal = 0,
+  taxRate = 0,
+  taxAmount = 0,
   total,
   change,
   cart,
@@ -32,6 +35,9 @@ export default function ReceiptModal({
       paymentMethod: "Cash",
       given: total + change,
       change: change,
+      subtotal: subtotal,
+      taxRate: taxRate,
+      taxAmount: taxAmount,
       total: total,
       cart: cart.map(item => ({
         qty: item.qty || item.quantity || 1,
@@ -100,7 +106,15 @@ export default function ReceiptModal({
       </div>
 
       <div className="border-t pt-2 space-y-1 text-sm">
-        <div className="flex justify-between font-bold text-base">
+        <div className="flex justify-between text-gray-700">
+          <span>Subtotal:</span>
+          <span>₱ {subtotal.toFixed(2)}</span>
+        </div>
+        <div className="flex justify-between text-gray-700">
+          <span>Tax ({taxRate}%)</span>
+          <span>₱ {taxAmount.toFixed(2)}</span>
+        </div>
+        <div className="border-t pt-2 flex justify-between font-bold text-base">
           <span>Total:</span>
           <span>₱ {total.toFixed(2)}</span>
         </div>

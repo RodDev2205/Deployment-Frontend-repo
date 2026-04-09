@@ -151,6 +151,9 @@ export default function POSCashier({ isCashier, isAdmin }) {
           <ReceiptModal
             transactionId={data.transactionId}
             transactionNumber={data.transactionNumber}
+            subtotal={subtotal}
+            taxRate={taxRate}
+            taxAmount={taxAmount}
             total={data.totalAmount}
             change={data.changeAmount}
             cart={cart}
@@ -194,6 +197,9 @@ export default function POSCashier({ isCashier, isAdmin }) {
   const handleOpenPayment = () => {
     setModalContent(
       <PaymentModal
+        subtotal={subtotal}
+        taxRate={taxRate}
+        taxAmount={taxAmount}
         totalAmount={totalAmount}
         onConfirm={handleCheckout}
         onClose={() => setModalOpen(false)}
