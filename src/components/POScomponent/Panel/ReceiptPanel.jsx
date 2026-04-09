@@ -74,10 +74,6 @@ export default function ReceiptPanel({
             <span className="font-semibold">₱{taxAmount.toFixed(2)}</span>
           </div>
         )}
-        <div className="flex justify-between text-sm text-gray-700">
-          <span>Discount:</span>
-          <span className="font-semibold">None</span>
-        </div>
         <div className="flex justify-between items-center pt-2 border-t border-gray-200">
           <span className="font-bold text-gray-900">Total</span>
           <div className="bg-emerald-600 text-white rounded-lg px-3 py-2 font-bold text-lg">
