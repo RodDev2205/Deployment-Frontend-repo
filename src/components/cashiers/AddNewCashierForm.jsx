@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, Eye, EyeOff } from 'lucide-react';
 
 export default function AddNewCashierForm({ onAddCashier }) {
     const [formData, setFormData] = useState({ 
@@ -9,6 +9,7 @@ export default function AddNewCashierForm({ onAddCashier }) {
         password: '',
         contact_number: ''
     });
+    const [showPassword, setShowPassword] = useState(false);
 
     const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
@@ -58,15 +59,25 @@ export default function AddNewCashierForm({ onAddCashier }) {
                     className="p-3 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500" 
                     required 
                 />
-                <input 
-                    type="password" 
-                    name="password" 
-                    placeholder="Initial Password" 
-                    value={formData.password} 
-                    onChange={handleChange} 
-                    className="p-3 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500" 
-                    required 
-                />
+                <div className="relative">
+                    <input 
+                        type={showPassword ? 'text' : 'password'} 
+                        name="password" 
+                        placeholder="Initial Password" 
+                        value={formData.password} 
+                        onChange={handleChange} 
+                        className="p-3 pr-11 w-full border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500" 
+                        required 
+                    />
+                    <button
+                        type="button"
+                        onClick={() => setShowPassword((prev) => !prev)}
+                        className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-900"
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                </div>
                 <input 
                     type="tel" 
                     name="contact_number" 
