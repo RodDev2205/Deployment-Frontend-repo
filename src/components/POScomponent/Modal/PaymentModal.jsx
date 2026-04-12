@@ -162,34 +162,8 @@ export default function PaymentModal({ subtotal = 0, taxRate = 0, taxAmount = 0,
                 className="flex-1 border px-3 py-2 rounded text-sm"
               >
                 <option value="none">No Discount</option>
-                <option value="percentage">Percentage</option>
-                <option value="fixed">Fixed Amount</option>
                 <option value="senior">Senior Discount</option>
               </select>
-
-              {discountType === "percentage" && (
-                <input
-                  type="number"
-                  value={discountValue}
-                  onChange={(e) => setDiscountValue(e.target.value)}
-                  placeholder="0"
-                  className="w-24 border px-3 py-2 rounded text-sm"
-                  min="0"
-                  max="100"
-                  step="0.01"
-                />
-              )}
-              {discountType === "fixed" && (
-                <input
-                  type="number"
-                  value={discountValue}
-                  onChange={(e) => setDiscountValue(e.target.value)}
-                  placeholder="0"
-                  className="w-24 border px-3 py-2 rounded text-sm"
-                  min="0"
-                  step="0.01"
-                />
-              )}
             </div>
 
             {discountAmount > 0 && (
