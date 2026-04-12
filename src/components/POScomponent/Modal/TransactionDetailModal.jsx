@@ -18,12 +18,10 @@ export default function TransactionDetailModal({
   const { success, error: alertError } = useAlert();
 
   const [showVoidForm, setShowVoidForm] = React.useState(false);
-  const [voidType, setVoidType] = React.useState("full");
   const [reason, setReason] = React.useState("");
   const [adminPin, setAdminPin] = React.useState("");
   const [submittingVoid, setSubmittingVoid] = React.useState(false);
   const [voidError, setVoidError] = React.useState("");
-  const [voidQuantities, setVoidQuantities] = React.useState({});
 
 
 
@@ -136,80 +134,21 @@ export default function TransactionDetailModal({
       {/* actions area - void form */}
       {showVoidForm ? (
         <div className="space-y-4 mt-4 border-t pt-4 bg-red-50 p-4 rounded-lg">
-          <h3 className="font-semibold text-red-700 text-lg">VOID TRANSACTION</h3>
+          <h3 className="font-semibold text-red-700 text-lg">VOID ENTIRE TRANSACTION</h3>
           
           <div className="flex flex-col md:flex-row gap-6">
-            {/* Left side - Void options */}
-            <div className="flex-1 space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Void Type:</label>
-                <div className="space-x-6">
-                  <label className="inline-flex items-center">
-                    <input
-                      type="radio"
-                      name="voidType"
-                      value="full"
-                      checked={voidType === 'full'}
-                      onChange={() => { setVoidType('full'); setVoidQuantities({}); }}
-                      className="mr-2"
-                    />Full Void
-                  </label>
-                  <label className="inline-flex items-center">
-                    <input
-                      type="radio"
-                      name="voidType"
-                      value="partial"
-                      checked={voidType === 'partial'}
-                      onChange={() => setVoidType('partial')}
-                      className="mr-2"
-                    />Partial Void
-                  </label>
-                </div>
+            {/* Alert message */}
+            <div className="flex-1">
+              <div className="bg-red-100 border-l-4 border-red-500 p-4 rounded mb-4">
+                <p className="text-red-700 font-medium">⚠️ Warning</p>
+                <p className="text-red-600 text-sm mt-1">This will void the ENTIRE transaction. This action cannot be undone.</p>
               </div>
-
-              {voidType === 'partial' && (
-                <div className="space-y-3">
-                  <label className="block text-sm font-medium">Select items to void:</label>
-                  <div className="bg-white p-3 rounded border space-y-2 text-sm max-h-64 overflow-y-auto">
-                    {remainingItems.map((it) => {
-                      const qty = voidQuantities[it.menu_id] || 0;
-                      const maxQty = it.remaining;
-                      return (
-                        <div key={it.menu_id} className="flex items-center justify-between py-2">
-                          <span className="flex-1">{it.product_name || it.menu_id} (max: {it.remaining})</span>
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => setVoidQuantities(prev => ({
-                                ...prev,
-                                [it.menu_id]: Math.max(0, qty - 1)
-                              }))}
-                              className="bg-gray-300 px-3 py-1 rounded hover:bg-gray-400 text-sm"
-                              disabled={maxQty === 0}
-                            >
-                              −
-                            </button>
-                            <span className="w-8 text-center font-medium">{qty}</span>
-                            <button
-                              onClick={() => setVoidQuantities(prev => ({
-                                ...prev,
-                                [it.menu_id]: Math.min(maxQty, qty + 1)
-                              }))}
-                              className="bg-gray-300 px-3 py-1 rounded hover:bg-gray-400 text-sm"
-                              disabled={maxQty === 0}
-                            >
-                              +
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
             </div>
+          </div>
 
+          <div className="flex flex-col md:flex-row gap-6">
             {/* Right side - Form inputs */}
-            <div className="md:w-80 space-y-4">
+            <div className="md:w-80 space-y-4 ml-auto">
               <div>
                 <label className="block text-sm font-medium mb-2">Reason for void:</label>
                 <textarea
@@ -237,7 +176,7 @@ export default function TransactionDetailModal({
               <div className="flex gap-3 pt-2">
                 <button
                   disabled={submittingVoid}
-                  className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg disabled:opacity-50"
+                  className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg disabled:opacity-50"
                   onClick={async () => {
                     if (!reason.trim() || !adminPin.trim()) {
                       setVoidError("Reason and PIN are required");
@@ -251,9 +190,6 @@ export default function TransactionDetailModal({
                         reason,
                         admin_pin: adminPin,
                       };
-                      if (voidType === 'partial') {
-                        body.void_items = voidQuantities; // {menu_id:qty}
-                      }
                       const res = await fetch(`${API_BASE_URL}/api/pos/void`, {
                         method: "POST",
                         headers: {

@@ -140,6 +140,28 @@ export default function POSCashier({ isCashier, isAdmin }) {
     });
   };
 
+  const incrementItem = (productId) => {
+    setCart((prev) => {
+      const updated = prev.map((i) => ({ ...i }));
+      const idx = updated.findIndex((i) => i.product_id === productId);
+      if (idx !== -1) {
+        updated[idx].qty += 1;
+      }
+      return updated;
+    });
+  };
+
+  const updateItemQuantity = (productId, newQty) => {
+    setCart((prev) => {
+      const updated = prev.map((i) => ({ ...i }));
+      const idx = updated.findIndex((i) => i.product_id === productId);
+      if (idx !== -1 && newQty > 0) {
+        updated[idx].qty = newQty;
+      }
+      return updated;
+    });
+  };
+
   const handleOpenPayment = () => {
     setModalContent(
       <PaymentModal
@@ -215,6 +237,8 @@ export default function POSCashier({ isCashier, isAdmin }) {
             handleCheckout={handleOpenPayment}
             setCart={setCart}
             decrementItem={decrementItem}
+            incrementItem={incrementItem}
+            updateItemQuantity={updateItemQuantity}
             isCashier={isCashier}
             isAdmin={isAdmin}
             handleVoidTransaction={handleVoidTransaction}
