@@ -10,6 +10,8 @@ export default function ReceiptPanel({
   handleCheckout,
   setCart,
   decrementItem,
+  incrementItem,
+  updateItemQuantity,
   isCashier,
   isAdmin,
 }) {
@@ -18,6 +20,13 @@ export default function ReceiptPanel({
     day: "numeric",
     year: "numeric",
   });
+
+  const handleQuantityChange = (productId, newQty) => {
+    const qty = parseInt(newQty);
+    if (qty > 0 && updateItemQuantity) {
+      updateItemQuantity(productId, qty);
+    }
+  };
 
   return (
     <div className="w-96 bg-white rounded-xl overflow-hidden shadow-sm border border-gray-200 flex flex-col">
@@ -43,17 +52,38 @@ export default function ReceiptPanel({
           </div>
         ) : (
           cart.map((item) => (
-            <div key={item.product_id} className="flex justify-between items-start text-sm bg-gray-50 rounded-lg p-3 hover:shadow-sm transition-shadow">
-              <button
-                className="w-6 h-6 flex items-center justify-center bg-red-500 text-white rounded-full mr-2 hover:bg-red-600"
-                onClick={() => decrementItem(item.product_id)}
-              >
-                -
-              </button>
+            <div key={item.product_id} className="flex justify-between items-center text-sm bg-gray-50 rounded-lg p-3 hover:shadow-sm transition-shadow group">
               <div className="flex-1 pr-2">
                 <div className="font-semibold text-gray-900 text-xs">{item.item}</div>
-                <div className="text-xs text-gray-600">{item.qty}x @ ₱{item.price.toFixed(2)}</div>
+                <div className="text-xs text-gray-600">₱{item.price.toFixed(2)} each</div>
               </div>
+              
+              {/* Quantity Controls */}
+              <div className="flex items-center gap-2 mx-2 bg-white rounded-lg border border-gray-300 px-2 py-1">
+                <button
+                  className="text-red-500 hover:bg-red-50 rounded px-1 font-bold"
+                  onClick={() => decrementItem(item.product_id)}
+                  title="Decrease quantity"
+                >
+                  −
+                </button>
+                <input
+                  type="number"
+                  min="1"
+                  value={item.qty}
+                  onChange={(e) => handleQuantityChange(item.product_id, e.target.value)}
+                  className="w-12 text-center font-bold text-gray-900 border-none focus:outline-none"
+                />
+                <button
+                  className="text-green-600 hover:bg-green-50 rounded px-1 font-bold"
+                  onClick={() => incrementItem && incrementItem(item.product_id)}
+                  title="Increase quantity"
+                >
+                  +
+                </button>
+              </div>
+
+              {/* Total Price */}
               <div className="font-bold text-emerald-600 text-right min-w-max">
                 ₱{(item.qty * item.price).toFixed(2)}
               </div>

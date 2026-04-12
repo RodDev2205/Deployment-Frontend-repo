@@ -9,6 +9,8 @@ export default function PaymentModal({ subtotal = 0, taxRate = 0, taxAmount = 0,
   const [discountValue, setDiscountValue] = useState("");
   const [orderType, setOrderType] = useState("dine-in"); // dine-in or takeout
 
+  const SENIOR_DISCOUNT_PERCENTAGE = 20; // 20% fixed discount for seniors
+
   // Ensure numbers are always safe
   const safeSubtotal = Number(subtotal) || 0;
   const safeTaxAmount = Number(taxAmount) || 0;
@@ -22,6 +24,9 @@ export default function PaymentModal({ subtotal = 0, taxRate = 0, taxAmount = 0,
     }
     if (discountType === "fixed") {
       return safeDiscountValue;
+    }
+    if (discountType === "senior") {
+      return (safeTotal * SENIOR_DISCOUNT_PERCENTAGE) / 100;
     }
     return 0;
   }, [discountType, safeDiscountValue, safeTotalWithTax]);
@@ -153,9 +158,10 @@ export default function PaymentModal({ subtotal = 0, taxRate = 0, taxAmount = 0,
                 <option value="none">No Discount</option>
                 <option value="percentage">Percentage (%)</option>
                 <option value="fixed">Fixed (₱)</option>
+                <option value="senior">Senior Discount ({SENIOR_DISCOUNT_PERCENTAGE}%)</option>
               </select>
 
-              {discountType !== "none" && (
+              {discountType !== "none" && discountType !== "senior" && (
                 <input
                   type="number"
                   value={discountValue}
