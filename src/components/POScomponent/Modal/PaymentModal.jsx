@@ -26,7 +26,7 @@ export default function PaymentModal({ subtotal = 0, taxRate = 0, taxAmount = 0,
       return safeDiscountValue;
     }
     if (discountType === "senior") {
-      return (safeTotal * SENIOR_DISCOUNT_PERCENTAGE) / 100;
+      return (safeTotalWithTax * SENIOR_DISCOUNT_PERCENTAGE) / 100;
     }
     return 0;
   }, [discountType, safeDiscountValue, safeTotalWithTax]);
@@ -49,6 +49,12 @@ export default function PaymentModal({ subtotal = 0, taxRate = 0, taxAmount = 0,
       return;
     }
 
+    // For senior discount, pass 0.2 as the decimal value (20%)
+    let discountValueToSend = safeDiscountValue;
+    if (discountType === "senior") {
+      discountValueToSend = 0.2; // 20% as decimal
+    }
+
     onConfirm({
       paymentMethod: "cash",
       amountPaid: safeAmountPaid,
@@ -57,7 +63,7 @@ export default function PaymentModal({ subtotal = 0, taxRate = 0, taxAmount = 0,
       orderType,
       discount: {
         type: discountType,
-        value: safeDiscountValue,
+        value: discountValueToSend,
         amount: discountAmount,
       },
     });
@@ -156,12 +162,24 @@ export default function PaymentModal({ subtotal = 0, taxRate = 0, taxAmount = 0,
                 className="flex-1 border px-3 py-2 rounded text-sm"
               >
                 <option value="none">No Discount</option>
-                <option value="percentage">Percentage (%)</option>
-                <option value="fixed">Fixed (₱)</option>
-                <option value="senior">Senior Discount ({SENIOR_DISCOUNT_PERCENTAGE}%)</option>
+                <option value="percentage">Percentage</option>
+                <option value="fixed">Fixed Amount</option>
+                <option value="senior">Senior Discount</option>
               </select>
 
-              {discountType !== "none" && discountType !== "senior" && (
+              {discountType === "percentage" && (
+                <input
+                  type="number"
+                  value={discountValue}
+                  onChange={(e) => setDiscountValue(e.target.value)}
+                  placeholder="0"
+                  className="w-24 border px-3 py-2 rounded text-sm"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                />
+              )}
+              {discountType === "fixed" && (
                 <input
                   type="number"
                   value={discountValue}
