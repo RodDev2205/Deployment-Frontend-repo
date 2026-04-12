@@ -188,11 +188,6 @@ export default function AdminReportsPage() {
       subtitle: "Status: Voided"
     },
     {
-      title: "Partial Voids",
-      value: todaySales?.partial_voided_count || 0,
-      subtitle: "Status: Partial Voided"
-    },
-    {
       title: "Staff Who Voided",
       value: todaySales?.staff_who_voided_count || 0,
       subtitle: "Unique staff members"
