@@ -596,12 +596,6 @@ export default function ReportPage() {
 
             <div className="flex items-center gap-2">
               <button
-                onClick={handleRefresh}
-                className="flex items-center gap-2 bg-gray-100 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-200 transition"
-              >
-                Refresh
-              </button>
-              <button
                 onClick={handleExportCSV}
                 className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
               >
