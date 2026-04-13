@@ -33,12 +33,12 @@ export default function ReceiptModal({
       orderId: transactionNumber,
       orderType: orderType || 'dine-in',
       paymentMethod: "Cash",
-      given: total + change,
-      change: change,
-      subtotal: subtotal,
-      taxRate: taxRate,
-      taxAmount: taxAmount,
-      total: total,
+      given: (total ?? 0) + (change ?? 0),
+      change: change ?? 0,
+      subtotal: subtotal ?? 0,
+      taxRate: taxRate ?? 0,
+      taxAmount: taxAmount ?? 0,
+      total: total ?? 0,
       cart: cart.map(item => ({
         qty: item.qty || item.quantity || 1,
         item: item.item || item.product_name || "Unknown Item",
@@ -100,7 +100,7 @@ export default function ReceiptModal({
             <span>
               {item.qty} x {item.item || item.product_name}
             </span>
-            <span>₱ {(item.qty * item.price).toFixed(2)}</span>
+            <span>₱ {((item.qty || 0) * (item.price || 0)).toFixed(2)}</span>
           </div>
         ))}
       </div>
