@@ -55,23 +55,22 @@ export const printReceipt = async (orderData) => {
     receipt.push('Qty  Item                  Price\n');
     receipt.push('-------------------------------\n');
     orderData.cart.forEach(item => {
-      const total = item.qty * item.price;
-      // right-align price in 10-char field for better alignment
-      const priceField = `PHP${total.toFixed(2)}`.padStart(10);
-      receipt.push(`${item.qty.toString().padStart(3)}  ${item.item.padEnd(16)} ${priceField}\n`);
-      const unitPriceField = `PHP${item.price.toFixed(2)}`.padStart(10);
+     const total = (item.qty || 0) * (item.price || 0);
+  const priceField = `PHP${(total || 0).toFixed(2)}`.padStart(10);
+  receipt.push(`${(item.qty || 0).toString().padStart(3)}  ${(item.item || '').padEnd(16)} ${priceField}\n`);
+  const unitPriceField = `PHP${(item.price || 0).toFixed(2)}`.padStart(10);
       receipt.push(`   @ ${unitPriceField}\n`);
     });
     receipt.push('-------------------------------\n');
-    receipt.push(`Subtotal:              PHP${orderData.subtotal.toFixed(2)}\n`);
+    receipt.push(`Subtotal:              PHP${(orderData.subtotal || 0).toFixed(2)}\n`);
     if (orderData.taxAmount !== undefined && orderData.taxAmount !== null) {
-      receipt.push(`Tax (${orderData.taxRate}%):        PHP${orderData.taxAmount.toFixed(2)}\n`);
+      receipt.push(`Tax (${orderData.taxRate || 0}%):        PHP${(orderData.taxAmount || 0).toFixed(2)}\n`);
     }
     if (orderData.paymentMethod === "Cash") {
       receipt.push(`Given:                 PHP${parseFloat(orderData.given).toFixed(2)}\n`);
       receipt.push(`Change:                PHP${parseFloat(orderData.change).toFixed(2)}\n`);
     }
-    receipt.push(`TOTAL:                 PHP${orderData.total.toFixed(2)}\n`);
+    receipt.push(`TOTAL:                 PHP${(orderData.total || 0).toFixed(2)}\n`);
     receipt.push('-------------------------------\n');
     receipt.push('\x1B\x61\x01');
     receipt.push('Thank you for dining!\n');
