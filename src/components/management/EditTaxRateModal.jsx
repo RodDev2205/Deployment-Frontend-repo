@@ -143,14 +143,6 @@ export default function EditTaxRateModal({ isOpen, onClose, branch, onSuccess })
           {/* Buttons */}
           <div className="flex justify-end space-x-3">
             <button
-              type="button"
-              onClick={onClose}
-              className="rounded border border-gray-300 px-4 py-2 text-gray-700 font-medium hover:bg-gray-50"
-              disabled={loading}
-            >
-              Cancel
-            </button>
-            <button
               type="submit"
               className="rounded bg-green-600 px-4 py-2 text-white font-medium hover:bg-green-700 disabled:bg-gray-400"
               disabled={loading}
