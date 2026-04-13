@@ -76,17 +76,6 @@ export default function ViewUserModal({ isOpen, onClose, user, onEdit }) {
           </button>
         </div>
 
-        {/* Role Badge */}
-        <div className="mt-4">
-          <span
-            className={`px-3 py-1 rounded-full text-sm font-medium ${
-              // try role string first, fallback to role_name field if available
-              roleColors[userData.role] || roleColors[userData.role_name] || "bg-gray-100 text-gray-700"
-            }`}
-          >
-            {displayValue(userData.role || userData.role_name)}
-          </span>
-        </div>
 
         {/* Basic Info */}
         <div className="mt-6">
@@ -107,6 +96,11 @@ export default function ViewUserModal({ isOpen, onClose, user, onEdit }) {
         <div className="mt-8">
           <h3 className="text-gray-600 font-semibold mb-3">Role & Access</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-6 text-sm">
+            <span className="text-gray-500">Role:</span>
+            <span className="font-medium">
+              {displayValue(userData.role || userData.role_name || userData.user_role)}
+            </span>
+
             <span className="text-gray-500">Branch:</span>
             <span className="font-medium">{displayValue(userData.branch)}</span>
 
