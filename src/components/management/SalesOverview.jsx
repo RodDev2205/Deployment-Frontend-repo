@@ -42,29 +42,37 @@ const SalesOverview = () => {
       <div className="mb-4 bg-gray-50 p-4 rounded-lg shadow-lg">
         <h3 className="text-gray-900 font-semibold mb-3">Total Sales {totalSalesDisplay}</h3>
 
-        {/* dynamic branch bars - vertical/portrait - scrollable */}
-        <div className="overflow-x-auto">
-          <div className="flex justify-start items-end gap-4 mb-6 h-48 min-w-max px-4">
-            {summary && summary.branches.map((b) => {
-              const percent = summary.overall_total ? (Number(b.total_sales) / summary.overall_total) * 100 : 0;
-              return (
-                <div key={b.branch_id} className="flex flex-col items-center gap-2 flex-shrink-0">
-                  <div className="h-32 flex flex-col justify-end">
-                    <div
-                      className="w-12 bg-green-400"
-                      style={{ height: `${percent}%` }}
-                    />
-                  </div>
-                  <span className="text-xs font-medium text-gray-600 text-center w-16 truncate" title={b.branch_name}>
-                    {b.branch_name}
-                  </span>
-                  <span className="text-xs font-semibold text-green-600">
-                    ₱ {Number(b.total_sales).toLocaleString()}
-                  </span>
+        {/* dynamic branch bars - vertical/portrait - responsive */}
+        <div className="flex flex-wrap justify-center items-end gap-4 mb-6 min-h-48">
+          {summary && summary.branches.slice(0, 8).map((b) => { // Limit to 8 branches to prevent overflow
+            const percent = summary.overall_total ? (Number(b.total_sales) / summary.overall_total) * 100 : 0;
+            return (
+              <div key={b.branch_id} className="flex flex-col items-center gap-2">
+                <div className="h-32 flex flex-col justify-end">
+                  <div
+                    className="w-12 bg-green-400"
+                    style={{ height: `${percent}%` }}
+                  />
                 </div>
-              );
-            })}
-          </div>
+                <span className="text-xs font-medium text-gray-600 text-center w-16 truncate" title={b.branch_name}>
+                  {b.branch_name}
+                </span>
+                <span className="text-xs font-semibold text-green-600">
+                  ₱ {Number(b.total_sales).toLocaleString()}
+                </span>
+              </div>
+            );
+          })}
+          {summary && summary.branches.length > 8 && (
+            <div className="flex flex-col items-center gap-2 text-gray-500">
+              <div className="h-32 flex flex-col justify-end">
+                <div className="w-12 bg-gray-300 text-xs flex items-center justify-center text-center p-1">
+                  +{summary.branches.length - 8}
+                </div>
+              </div>
+              <span className="text-xs font-medium text-center w-16">More</span>
+            </div>
+          )}
         </div>
 
         <hr className="my-3 border-gray-300" />
@@ -78,7 +86,7 @@ const SalesOverview = () => {
           </button>
           
           {showTransactions && (
-            <div className="mt-2 space-y-2 max-h-40 overflow-y-auto">
+            <div className="mt-2 space-y-2">
               {summary && summary.branches.map((b) => (
                 <div key={b.branch_id} className="flex justify-between items-center p-2 bg-gray-100 rounded">
                   <span className="text-sm font-medium text-gray-700">{b.branch_name}</span>

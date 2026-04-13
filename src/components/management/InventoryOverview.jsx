@@ -62,7 +62,7 @@ const InventoryOverview = () => {
       <h2 className="text-2xl font-bold text-gray-900 mb-4">Inventory Overview</h2>
 
       {/* Branch Tabs */}
-      <div className="flex gap-0 mb-4 pb-3 pr-3 border-b-2 border-gray-300 overflow-x-auto">
+      <div className="flex flex-wrap gap-0 mb-4 pb-3 pr-3 border-b-2 border-gray-300">
         {branchTabs.map((tab) => {
           const isAll = tab === 'all';
           const label = isAll ? 'All Branches' : (branches.find(b => b.branch_id.toString() === tab)?.branch_name || tab);
@@ -70,7 +70,7 @@ const InventoryOverview = () => {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 font-semibold mr-4 ${
+              className={`px-4 py-2 font-semibold mr-4 mb-2 ${
                 activeTab === tab
                   ? 'bg-green-700 text-white px-6 py-2 rounded'
                   : 'text-gray-700 hover:text-gray-900'
