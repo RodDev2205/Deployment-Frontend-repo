@@ -284,12 +284,6 @@ export default function AdminReportsPage() {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setRefreshTrigger(prev => prev + 1)}
-            className="flex items-center gap-2 bg-gray-600 text-white px-4 py-2 rounded-xl shadow-md hover:opacity-90"
-          >
-            Refresh
-          </button>
-          <button
             onClick={exportCSV}
             className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl shadow-md hover:opacity-90"
           >
