@@ -32,7 +32,7 @@ const SalesOverview = () => {
     : '₱ 0.00';
 
   return (
-    <div className="bg-white rounded-lg p-4 h-96 overflow-y-auto">
+    <div className="bg-white rounded-lg p-4 mb-6">
       <div className="flex items-center gap-4 mb-2">
         <h2 className="text-2xl font-bold text-gray-900">Sales Overview</h2>
       </div>
