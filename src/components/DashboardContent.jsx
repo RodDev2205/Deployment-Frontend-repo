@@ -30,32 +30,32 @@ const TopMenuSalesChart = ({ menuSales }) => {
 
   return (
     <div className="w-full h-80 flex flex-col">
-      {/* Horizontal bars */}
-      <div className="flex-1 flex flex-col gap-4 px-4 py-4">
+      {/* Y-axis labels and bars */}
+      <div className="flex-1 flex items-end gap-2 px-2 py-4 border-l-2 border-gray-300">
         {sorted.map((item, idx) => {
-          const widthPercent = maxSales > 0 ? (Number(item.total_sales) || 0) / maxSales * 100 : 0;
+          const heightPercent = maxSales > 0 ? (Number(item.total_sales) || 0) / maxSales * 100 : 0;
           return (
-            <div key={idx} className="flex items-center gap-4">
-              {/* Label */}
-              <div className="w-32 text-right">
-                <p className="text-sm font-semibold text-gray-700 truncate" title={item.menu_name}>
-                  {item.menu_name || 'N/A'}
-                </p>
-                <p className="text-xs text-gray-500">{item.branch_name || 'Branch'}</p>
-              </div>
-              
+            <div key={idx} className="flex-1 flex flex-col items-center gap-2">
               {/* Bar */}
-              <div className="flex-1 flex items-center">
+              <div className="w-full flex flex-col items-center justify-end" style={{ height: '280px' }}>
                 <div 
-                  className="h-8 bg-gradient-to-r from-green-800 to-green-600 rounded transition-all hover:from-green-600 hover:to-green-500 cursor-pointer group relative"
-                  style={{ width: `${widthPercent}%`, minWidth: widthPercent > 0 ? '20px' : '0px' }}
+                  className="w-full bg-gradient-to-t from-green-800 to-green-600 rounded-t transition-all hover:from-green-600 hover:to-green-500 cursor-pointer group relative"
+                  style={{ height: `${heightPercent}%`, minHeight: heightPercent > 0 ? '20px' : '0px' }}
                   title={`${item.menu_name}: ₱${Number(item.total_sales || 0).toLocaleString()}`}
                 >
-                  {/* Value label */}
-                  <div className="absolute -right-16 top-1/2 transform -translate-y-1/2 bg-gray-800 text-white px-2 py-1 rounded text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+                  {/* Value label on hover */}
+                  <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-2 py-1 rounded text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
                     ₱{Number(item.total_sales || 0).toLocaleString()}
                   </div>
                 </div>
+              </div>
+              
+              {/* Label */}
+              <div className="w-full text-center -mb-1">
+                <p className="text-xs font-semibold text-gray-700 truncate" title={item.menu_name}>
+                  {item.menu_name || 'N/A'}
+                </p>
+                <p className="text-xs text-gray-500">{item.branch_name || 'Branch'}</p>
               </div>
             </div>
           );
@@ -216,32 +216,36 @@ const DashboardContent = () => {
       </div>
 
 
-      {/* Recent Transactions Dropdown */}
+      {/* Recent Transactions (flattened recent items up to 3 per branch) */}
       <div className="bg-white p-6 rounded-xl shadow-lg">
         <h3 className="text-xl font-semibold text-gray-800 mb-4">Recent POS Transactions</h3>
-        <select className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
-          <option value="" disabled selected>Select a transaction to view details</option>
-          {Object.values(recentTransactions)
-            .flat()
-            .slice(0, 12) // show up to 12 transactions
-            .map((t) => {
-              const txId = t.transaction_number || t.id || t.tx_id;
-              const cashier = t.cashier_username || t.cashier || t.user;
-              const amount = Number(t.total_amount || t.amount || 0).toLocaleString();
-              const dateTime = t.created_at || t.time || t.timestamp || t.date ? 
-                new Date(t.created_at || t.time || t.timestamp || t.date).toLocaleString(undefined, { 
-                  hour: 'numeric', minute: 'numeric', year: 'numeric', month: 'numeric', day: 'numeric' 
-                }) : 'N/A';
-              const status = t.status || 'Completed';
-              
-              return (
-                <option key={txId} value={txId} className="py-2">
-                  {`ID: ${txId} | Cashier: ${cashier} | Amount: ₱${amount} | Date: ${dateTime} | Status: ${status}`}
-                </option>
-              );
-            })}
-        </select>
-        <p className="text-center text-sm text-gray-500 mt-4">Showing up to 12 recent transactions</p>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Transaction ID</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cashier</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date & Time</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {Object.values(recentTransactions)
+                .flat()
+                .slice(0, 12) // show up to 12 rows (e.g., 3 per up to 4 branches)
+                .map((t) => (
+                  <tr key={t.transaction_id || t.id || t.tx_id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{t.transaction_number || t.id || t.tx_id}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{t.cashier_username || t.cashier || t.user}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-bold">₱{Number(t.total_amount || t.amount || 0).toLocaleString()}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{t.created_at || t.time || t.timestamp || t.date ? new Date(t.created_at || t.time || t.timestamp || t.date).toLocaleString(undefined, { hour: 'numeric', minute: 'numeric', year: 'numeric', month: 'numeric', day: 'numeric' }) : ''}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">{t.status}</td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
