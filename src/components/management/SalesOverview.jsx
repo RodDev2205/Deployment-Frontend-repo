@@ -48,11 +48,12 @@ const SalesOverview = () => {
             {summary && summary.branches.map((b) => {
               const percent = summary.overall_total ? (Number(b.total_sales) / summary.overall_total) * 100 : 0;
               return (
-                <div key={b.branch_id} className="flex flex-col items-center gap-2 flex-shrink-0">
+                <div key={b.branch_id} className="flex flex-col items-center gap-2 flex-shrink-0 group">
                   <div className="h-32 flex flex-col justify-end">
                     <div
-                      className="w-12 bg-green-400"
+                      className="w-12 bg-green-400 hover:bg-green-500 transition-colors"
                       style={{ height: `${percent}%` }}
+                      title={`${b.branch_name}: ₱ ${Number(b.total_sales).toLocaleString()}`}
                     />
                   </div>
                   <span className="text-xs font-medium text-gray-600 text-center w-16 truncate" title={b.branch_name}>
