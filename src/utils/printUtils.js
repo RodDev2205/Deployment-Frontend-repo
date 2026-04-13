@@ -24,7 +24,7 @@ export const printReceipt = async (orderData) => {
     }
 
     // Configure the printer (serial connection COM6)
-    const printer = qz.configs.create("POS-58(copy of 1)");
+    const printer = qz.configs.create("XP-80C");
 
 
     console.log("📄 Formatting receipt for print...");
