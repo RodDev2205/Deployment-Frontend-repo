@@ -730,7 +730,6 @@ export default function ReportPage() {
                   cx="50%"
                   cy="50%"
                   outerRadius={100}
-                  label={({ name, value }) => `${name}: ${value}%`}
                   labelLine={false}
                 >
                   {branchContribution.map((entry, index) => (
