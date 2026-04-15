@@ -164,12 +164,15 @@ export default function TransactionDetailModal({
               <div>
                 <label className="block text-sm font-medium mb-2">Admin PIN:</label>
                 <input
-                  type="password"
+                  type="text"
+                  inputMode="password"
                   className="w-full border rounded px-3 py-2"
                   value={adminPin}
                   onChange={(e) => setAdminPin(e.target.value)}
                   placeholder="Enter admin PIN"
                   autoComplete="off"
+                  name="adminVerification"
+                  data-lpignore="true"
                 />
                 <p className="text-xs text-gray-500 mt-1">*Only admins can approve void*</p>
               </div>
