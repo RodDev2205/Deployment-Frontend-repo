@@ -13,6 +13,7 @@ export default function TransactionDetailModal({
   const {
     transaction,
     items,
+    discountDetails,
   } = data;
 
   const { success, error: alertError } = useAlert();
@@ -111,6 +112,26 @@ export default function TransactionDetailModal({
               <span>Discount:</span>
               <span>₱ {discountAmount.toFixed(2)}</span>
             </div>
+
+            {discountDetails && (transaction.discount_type === 'senior' || transaction.discount_type === 'pwd') && (
+              <div className="border-t pt-2 mt-2 space-y-1">
+                <div className="flex justify-between">
+                  <span className="font-semibold capitalize">{transaction.discount_type} Discount:</span>
+                  <span className="text-xs font-medium px-2 py-1 rounded-full bg-blue-100 text-blue-700">
+                    {transaction.discount_type.toUpperCase()}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Customer Name:</span>
+                  <span className="font-medium">{discountDetails.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>ID Number:</span>
+                  <span className="font-medium">{discountDetails.id_number}</span>
+                </div>
+              </div>
+            )}
+
             <div className="flex justify-between font-semibold text-lg border-t pt-2">
               <span>Total:</span>
               <span>₱ {total.toFixed(2)}</span>
