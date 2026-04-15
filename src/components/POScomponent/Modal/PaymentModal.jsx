@@ -24,21 +24,23 @@ export default function PaymentModal({ subtotal = 0, taxRate = 0, taxAmount = 0,
 
   const discountAmount = useMemo(() => {
     if (discountType === "percentage") {
-      return (safeTotalWithTax * safeDiscountValue) / 100;
+      return (safeSubtotal * safeDiscountValue) / 100;
     }
     if (discountType === "fixed") {
       return safeDiscountValue;
     }
     if (discountType === "senior") {
-      return (safeTotalWithTax * SENIOR_DISCOUNT_PERCENTAGE) / 100;
+      return (safeSubtotal * SENIOR_DISCOUNT_PERCENTAGE) / 100;
     }
     if (discountType === "pwd") {
-      return (safeTotal * PWD_DISCOUNT_PERCENTAGE) / 100;
+      return (safeSubtotal * PWD_DISCOUNT_PERCENTAGE) / 100;
     }
     return 0;
-  }, [discountType, safeDiscountValue, safeTotalWithTax]);
+  }, [discountType, safeDiscountValue, safeSubtotal]);
 
-  const finalAmount = Math.max(safeTotalWithTax - discountAmount, 0);
+  const adjustedTaxAmount = Math.round(((safeSubtotal - discountAmount) * (Number(taxRate) / 100)) * 100) / 100;
+  const discountedSubtotal = safeSubtotal - discountAmount;
+  const finalAmount = Math.max(discountedSubtotal + adjustedTaxAmount, 0);
   const change = safeAmountPaid - finalAmount;
   const isValidPayment = safeAmountPaid >= finalAmount && finalAmount > 0;
 
@@ -62,6 +64,8 @@ export default function PaymentModal({ subtotal = 0, taxRate = 0, taxAmount = 0,
       alertError("Verification Required", "Please verify Senior/PWD information first.");
       return;
     }
+
+    const discountValueToSend = discountType === "senior" || discountType === "pwd" ? 0.2 : safeDiscountValue;
 
     onConfirm({
       paymentMethod: "cash",
@@ -161,7 +165,7 @@ export default function PaymentModal({ subtotal = 0, taxRate = 0, taxAmount = 0,
             <div className="flex justify-between text-emerald-600">
               <span className="font-medium">Tax ({Number(taxRate).toFixed(2)}%)</span>
               <span className="font-semibold">
-                ₱{safeTaxAmount.toFixed(2)}
+                ₱{adjustedTaxAmount.toFixed(2)}
               </span>
             </div>
 
