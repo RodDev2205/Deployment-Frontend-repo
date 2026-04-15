@@ -171,10 +171,16 @@ export default function POSCashier({ isCashier, isAdmin }) {
   };
 
   const handleOpenPayment = () => {
+    // Calculate adjusted subtotal for VATable items
+    const adjustedSubtotal = cart.reduce((sum, item) => {
+      const adjustedPrice = item.vat_type === 'vat' ? item.price / 1.12 : item.price;
+      return sum + item.qty * adjustedPrice;
+    }, 0);
+
     setModalContent(
       <PaymentModal
-        subtotal={subtotal}
-        totalAmount={totalAmount}
+        subtotal={adjustedSubtotal}
+        totalAmount={adjustedSubtotal} // Since no tax added back yet
         onConfirm={handleCheckout}
         onClose={() => setModalOpen(false)}
       />
