@@ -265,9 +265,12 @@ export default function MenuListTab() {
             <h3 className="font-semibold">{item.product_name}</h3>
             <p className="text-sm text-gray-500">{item.category_name}</p>
             <p className="text-sm font-medium mt-1">₱ {item.price}</p>
+            <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold mt-2 ${item.vat_type === 'non-vat' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
+              {item.vat_type === 'non-vat' ? 'Non-VATable' : 'VATable'}
+            </span>
 
             <p
-              className={`text-sm font-medium mt-2 ${
+              className={`text-sm font-medium mt-3 ${
                 item.approval_status === "APPROVED"
                   ? "text-green-600"
                   : item.approval_status === "PENDING"
@@ -340,6 +343,12 @@ export default function MenuListTab() {
                   <p>
                     <span className="font-medium text-gray-800">Branch:</span>{" "}
                     {selectedProduct.branch_name}
+                  </p>
+                  <p>
+                    <span className="font-medium text-gray-800">VAT Type:</span>{" "}
+                    <span className={`inline-flex items-center gap-2 px-2 py-1 rounded-full text-xs font-semibold ${selectedProduct.vat_type === 'non-vat' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
+                      {selectedProduct.vat_type === 'non-vat' ? 'Non-VATable' : 'VATable'}
+                    </span>
                   </p>
                   {selectedProduct.reviewed_at && (
                     <p>
