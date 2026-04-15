@@ -223,7 +223,6 @@ export default function EditMenuItemModal({ isOpen, onClose, onSaved, item, cate
               {filePreview && <div className="w-full h-48 rounded overflow-hidden"><img src={filePreview} alt="preview" className="w-full h-full object-cover" /></div>}
 
               <div className="flex gap-3 pt-4">
-                <button onClick={onClose} className="flex-1 bg-gray-100 py-2 rounded">Cancel</button>
                 <button onClick={() => setModalStep(2)} className="flex-1 bg-green-600 text-white py-2 rounded">Next</button>
               </div>
             </div>
