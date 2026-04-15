@@ -1,9 +1,8 @@
 import React, {useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Store, UserCircle, Users, PhilippinePeso } from 'lucide-react';
+import { Store, UserCircle, Users } from 'lucide-react';
 import BranchList from '../components/management/BranchList';
 import EmployeeTable from '../components/management/EmployeeTable';
-import TaxRateTable from '../components/management/TaxRateTable';
 
 export default function ManagementPage() {
     const { branches = [], admins = [], cashiers = [] } = useOutletContext() || {};
@@ -48,17 +47,6 @@ export default function ManagementPage() {
                             <Users className="w-4 h-4 inline mr-2" />
                             Cashier Management
                         </button>
-                        <button
-                            onClick={() => setActiveTab('tax-rates')}
-                            className={`py-4 border-b-2 font-medium text-sm ${
-                                activeTab === 'tax-rates'
-                                    ? 'border-green-600 text-green-600'
-                                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                            }`}
-                        >
-                            <PhilippinePeso className="w-4 h-4 inline mr-2" />
-                            Tax Rate Management
-                        </button>
                     </div>
                 </div>
 
@@ -66,7 +54,6 @@ export default function ManagementPage() {
                     {activeTab === 'branches' && <BranchList branches={branches} />}
                     {activeTab === 'admins' && <EmployeeTable employees={admins} type="Admin" />}
                     {activeTab === 'cashiers' && <EmployeeTable employees={cashiers} type="Cashier" />}
-                    {activeTab === 'tax-rates' && <TaxRateTable />}
                 </div>
             </div>
         </div>

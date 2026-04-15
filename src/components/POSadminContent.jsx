@@ -19,7 +19,6 @@ export default function POSCashier({ isCashier, isAdmin }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notification, setNotification] = useState(null);
-  const [taxRate, setTaxRate] = useState(0);
 
   // ================== FETCH PRODUCTS ==================
   useEffect(() => {
@@ -45,35 +44,8 @@ export default function POSCashier({ isCashier, isAdmin }) {
       });
   }, []);
 
-  // ================== FETCH TAX RATE ==================
-  useEffect(() => {
-    const fetchTaxRate = async () => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/branches/current/tax-rate`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          const rate = Number(data.tax_rate) || 0;
-          console.log("✅ Tax rate fetched:", rate);
-          setTaxRate(rate);
-        } else {
-          console.warn("⚠️ Failed to fetch tax rate, status:", response.status);
-          setTaxRate(0);
-        }
-      } catch (error) {
-        console.error("❌ Error fetching tax rate:", error);
-        setTaxRate(0);
-      }
-    };
-
-    fetchTaxRate();
-  }, []);
-
   const subtotal = cart.reduce((sum, item) => sum + item.qty * item.price, 0);
-  const taxAmount = subtotal * (taxRate / 100);
-  const totalAmount = subtotal + taxAmount;
+  const totalAmount = subtotal;
 
   const filteredItems = useMemo(() => {
     let result = items.filter(
@@ -130,8 +102,6 @@ export default function POSCashier({ isCashier, isAdmin }) {
             transactionId={data.transactionId}
             transactionNumber={data.transactionNumber}
             subtotal={subtotal}
-            taxRate={taxRate}
-            taxAmount={taxAmount}
             total={data.totalAmount}
             change={data.changeAmount}
             cart={cart}
@@ -198,8 +168,6 @@ export default function POSCashier({ isCashier, isAdmin }) {
     setModalContent(
       <PaymentModal
         subtotal={subtotal}
-        taxRate={taxRate}
-        taxAmount={taxAmount}
         totalAmount={totalAmount}
         onConfirm={handleCheckout}
         onClose={() => setModalOpen(false)}
@@ -270,8 +238,6 @@ export default function POSCashier({ isCashier, isAdmin }) {
             cart={cart}
             totalAmount={totalAmount}
             subtotal={subtotal}
-            taxRate={taxRate}
-            taxAmount={taxAmount}
             handleCheckout={handleOpenPayment}
             setCart={setCart}
             decrementItem={decrementItem}

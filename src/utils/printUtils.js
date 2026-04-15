@@ -63,9 +63,6 @@ export const printReceipt = async (orderData) => {
     });
     receipt.push('-------------------------------\n');
     receipt.push(`Subtotal:              PHP${(orderData.subtotal || 0).toFixed(2)}\n`);
-    if (orderData.taxAmount !== undefined && orderData.taxAmount !== null) {
-      receipt.push(`Tax (${orderData.taxRate || 0}%):        PHP${(orderData.taxAmount || 0).toFixed(2)}\n`);
-    }
     if (orderData.paymentMethod === "Cash") {
       receipt.push(`Given:                 PHP${parseFloat(orderData.given).toFixed(2)}\n`);
       receipt.push(`Change:                PHP${parseFloat(orderData.change).toFixed(2)}\n`);

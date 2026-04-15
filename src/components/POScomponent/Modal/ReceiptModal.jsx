@@ -6,8 +6,6 @@ export default function ReceiptModal({
   transactionId,
   transactionNumber,
   subtotal = 0,
-  taxRate = 0,
-  taxAmount = 0,
   total,
   change,
   cart,
@@ -36,8 +34,6 @@ export default function ReceiptModal({
       given: (total ?? 0) + (change ?? 0),
       change: change ?? 0,
       subtotal: subtotal ?? 0,
-      taxRate: taxRate ?? 0,
-      taxAmount: taxAmount ?? 0,
       total: total ?? 0,
       cart: cart.map(item => ({
         qty: item.qty || item.quantity || 1,
@@ -109,10 +105,6 @@ export default function ReceiptModal({
         <div className="flex justify-between text-gray-700">
           <span>Subtotal:</span>
           <span>₱ {subtotal.toFixed(2)}</span>
-        </div>
-        <div className="flex justify-between text-emerald-600 font-medium">
-          <span>Tax ({Number(taxRate).toFixed(2)}%)</span>
-          <span>₱ {taxAmount.toFixed(2)}</span>
         </div>
         <div className="border-t pt-2 flex justify-between font-bold text-base">
           <span>Total:</span>

@@ -2,7 +2,7 @@ import React, { useState, useMemo } from "react";
 import { useAlert } from "@/context/AlertContext";
 import SeniorPWDVerificationModal from "./SeniorPWDVerificationModal";
 
-export default function PaymentModal({ subtotal = 0, taxRate = 0, taxAmount = 0, totalAmount = 0, onConfirm, onClose }) {
+export default function PaymentModal({ subtotal = 0, totalAmount = 0, onConfirm, onClose }) {
   const { error: alertError } = useAlert();
 
   const [amountPaid, setAmountPaid] = useState("");
@@ -17,7 +17,6 @@ export default function PaymentModal({ subtotal = 0, taxRate = 0, taxAmount = 0,
 
   // Ensure numbers are always safe
   const safeSubtotal = Number(subtotal) || 0;
-  const safeTaxAmount = Number(taxAmount) || 0;
   const safeTotalWithTax = Number(totalAmount) || 0;
   const safeDiscountValue = Number(discountValue) || 0;
   const safeAmountPaid = Number(amountPaid) || 0;
@@ -38,9 +37,7 @@ export default function PaymentModal({ subtotal = 0, taxRate = 0, taxAmount = 0,
     return 0;
   }, [discountType, safeDiscountValue, safeSubtotal]);
 
-  const adjustedTaxAmount = Math.round(((safeSubtotal - discountAmount) * (Number(taxRate) / 100)) * 100) / 100;
-  const discountedSubtotal = safeSubtotal - discountAmount;
-  const finalAmount = Math.max(discountedSubtotal + adjustedTaxAmount, 0);
+  const finalAmount = Math.max(safeSubtotal - discountAmount, 0);
   const change = safeAmountPaid - finalAmount;
   const isValidPayment = safeAmountPaid >= finalAmount && finalAmount > 0;
 
@@ -159,13 +156,6 @@ export default function PaymentModal({ subtotal = 0, taxRate = 0, taxAmount = 0,
               <span className="text-gray-600">Subtotal</span>
               <span className="font-semibold">
                 ₱{safeSubtotal.toFixed(2)}
-              </span>
-            </div>
-
-            <div className="flex justify-between text-emerald-600">
-              <span className="font-medium">Tax ({Number(taxRate).toFixed(2)}%)</span>
-              <span className="font-semibold">
-                ₱{adjustedTaxAmount.toFixed(2)}
               </span>
             </div>
 
