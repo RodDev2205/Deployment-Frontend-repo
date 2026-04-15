@@ -104,6 +104,7 @@ export default function ItemsPanel({
                         item: item.product_name,
                         qty: 1,
                         price: Number(item.price),
+                        vat_type: item.vat_type,
                       },
                     ]);
                   }

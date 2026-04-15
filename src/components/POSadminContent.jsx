@@ -77,6 +77,12 @@ export default function POSCashier({ isCashier, isAdmin }) {
       return;
     }
 
+    // Adjust prices for VATable items: divide by 1.12 to remove 12% VAT
+    const adjustedCart = cart.map(item => ({
+      ...item,
+      price: item.vat_type === 'vat' ? item.price / 1.12 : item.price
+    }));
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/pos/complete-sale`, {
         method: "POST",
@@ -85,7 +91,7 @@ export default function POSCashier({ isCashier, isAdmin }) {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
         body: JSON.stringify({
-          cart,
+          cart: adjustedCart,
           paymentMethod: paymentData.paymentMethod,
           amountPaid: paymentData.amountPaid,
           discount: paymentData.discount,
