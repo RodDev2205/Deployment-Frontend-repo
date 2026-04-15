@@ -125,10 +125,6 @@ export default function TransactionDetailModal({
                   <span>Customer Name:</span>
                   <span className="font-medium">{discountDetails.name}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>ID Number:</span>
-                  <span className="font-medium">{discountDetails.id_number}</span>
-                </div>
               </div>
             )}
 
