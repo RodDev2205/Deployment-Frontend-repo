@@ -147,6 +147,7 @@ export default function Records () {
                     value={search}
                     onChange={e => { setSearch(e.target.value); setPage(1); }}
                     className="border border-gray-300 rounded-lg px-4 py-2 w-64 focus:outline-none focus:ring focus:border-blue-300"
+                    autoComplete="off"
                 />
             </div>
 
