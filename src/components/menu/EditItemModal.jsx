@@ -215,14 +215,6 @@ export default function EditItemModal({
           {/* Buttons */}
           <div className="flex justify-end gap-3 mt-4">
             <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded-full bg-gray-300"
-              disabled={loading}
-            >
-              Cancel
-            </button>
-            <button
               type="submit"
               className="px-4 py-2 rounded-full bg-green-600 text-white"
               disabled={loading}
