@@ -45,6 +45,10 @@ export default function POSCashier({ isCashier, isAdmin }) {
   }, []);
 
   const subtotal = cart.reduce((sum, item) => sum + item.qty * item.price, 0);
+  const vatAdjustedSubtotal = cart.reduce((sum, item) => {
+    const adjustedPrice = item.vat_type === 'vat' ? item.price / 1.12 : item.price;
+    return sum + item.qty * adjustedPrice;
+  }, 0);
   const totalAmount = subtotal;
 
   const filteredItems = useMemo(() => {
@@ -77,12 +81,6 @@ export default function POSCashier({ isCashier, isAdmin }) {
       return;
     }
 
-    // Adjust prices for VATable items: divide by 1.12 to remove 12% VAT
-    const adjustedCart = cart.map(item => ({
-      ...item,
-      price: item.vat_type === 'vat' ? item.price / 1.12 : item.price
-    }));
-
     try {
       const response = await fetch(`${API_BASE_URL}/api/pos/complete-sale`, {
         method: "POST",
@@ -91,7 +89,7 @@ export default function POSCashier({ isCashier, isAdmin }) {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
         body: JSON.stringify({
-          cart: adjustedCart,
+          cart,
           paymentMethod: paymentData.paymentMethod,
           amountPaid: paymentData.amountPaid,
           discount: paymentData.discount,
@@ -171,16 +169,10 @@ export default function POSCashier({ isCashier, isAdmin }) {
   };
 
   const handleOpenPayment = () => {
-    // Calculate adjusted subtotal for VATable items
-    const adjustedSubtotal = cart.reduce((sum, item) => {
-      const adjustedPrice = item.vat_type === 'vat' ? item.price / 1.12 : item.price;
-      return sum + item.qty * adjustedPrice;
-    }, 0);
-
     setModalContent(
       <PaymentModal
-        subtotal={adjustedSubtotal}
-        totalAmount={adjustedSubtotal} // Since no tax added back yet
+        subtotal={subtotal}
+        vatAdjustedSubtotal={vatAdjustedSubtotal}
         onConfirm={handleCheckout}
         onClose={() => setModalOpen(false)}
       />
