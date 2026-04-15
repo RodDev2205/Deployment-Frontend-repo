@@ -14,6 +14,7 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
     product_name: "",
     category_id: "",
     price: "",
+    vat_type: "vat",
     file: null,
     ingredients: [],
   });
@@ -207,6 +208,7 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
       formData.append("product_name", newItem.product_name.trim());
       formData.append("category_id", newItem.category_id);
       formData.append("price", parseFloat(newItem.price));
+      formData.append("vat_type", newItem.vat_type);
       if (newItem.file) {
         formData.append("image", newItem.file);
       }
@@ -371,6 +373,37 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
                   onChange={(e) => setNewItem({ ...newItem, price: e.target.value })}
                   className="w-full border border-gray-200 p-3 rounded-2xl focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-400"
                 />
+              </div>
+
+              {/* VAT Type */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">VAT Type *</label>
+                <div className="flex gap-6">
+                  <label className="inline-flex items-center">
+                    <input
+                      type="radio"
+                      name="vat_type"
+                      value="vat"
+                      checked={newItem.vat_type === "vat"}
+                      onChange={(e) => setNewItem({ ...newItem, vat_type: e.target.value })}
+                      disabled={loading}
+                      className="form-radio"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">VATable</span>
+                  </label>
+                  <label className="inline-flex items-center">
+                    <input
+                      type="radio"
+                      name="vat_type"
+                      value="non-vat"
+                      checked={newItem.vat_type === "non-vat"}
+                      onChange={(e) => setNewItem({ ...newItem, vat_type: e.target.value })}
+                      disabled={loading}
+                      className="form-radio"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">Non-VATable</span>
+                  </label>
+                </div>
               </div>
 
               {/* Image Upload */}

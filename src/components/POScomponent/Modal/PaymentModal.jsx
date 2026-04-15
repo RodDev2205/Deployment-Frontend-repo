@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { useAlert } from "@/context/AlertContext";
+import SeniorPWDVerificationModal from "./SeniorPWDVerificationModal";
 
 export default function PaymentModal({ subtotal = 0, taxRate = 0, taxAmount = 0, totalAmount = 0, onConfirm, onClose }) {
   const { error: alertError } = useAlert();
@@ -8,8 +9,11 @@ export default function PaymentModal({ subtotal = 0, taxRate = 0, taxAmount = 0,
   const [discountType, setDiscountType] = useState("none");
   const [discountValue, setDiscountValue] = useState("");
   const [orderType, setOrderType] = useState("dine-in"); // dine-in or takeout
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [verificationData, setVerificationData] = useState(null);
 
   const SENIOR_DISCOUNT_PERCENTAGE = 20; // 20% fixed discount for seniors
+  const PWD_DISCOUNT_PERCENTAGE = 20; // 20% fixed discount for PWD
 
   // Ensure numbers are always safe
   const safeSubtotal = Number(subtotal) || 0;
@@ -27,6 +31,9 @@ export default function PaymentModal({ subtotal = 0, taxRate = 0, taxAmount = 0,
     }
     if (discountType === "senior") {
       return (safeTotalWithTax * SENIOR_DISCOUNT_PERCENTAGE) / 100;
+    }
+    if (discountType === "pwd") {
+      return (safeTotal * PWD_DISCOUNT_PERCENTAGE) / 100;
     }
     return 0;
   }, [discountType, safeDiscountValue, safeTotalWithTax]);
@@ -49,10 +56,11 @@ export default function PaymentModal({ subtotal = 0, taxRate = 0, taxAmount = 0,
       return;
     }
 
-    // For senior discount, pass 0.2 as the decimal value (20%)
-    let discountValueToSend = safeDiscountValue;
-    if (discountType === "senior") {
-      discountValueToSend = 0.2; // 20% as decimal
+
+    // Check if verification is required but not completed
+    if ((discountType === "senior" || discountType === "pwd") && !verificationData) {
+      alertError("Verification Required", "Please verify Senior/PWD information first.");
+      return;
     }
 
     onConfirm({
@@ -65,10 +73,34 @@ export default function PaymentModal({ subtotal = 0, taxRate = 0, taxAmount = 0,
         type: discountType,
         value: discountValueToSend,
         amount: discountAmount,
+        verification: verificationData || null,
       },
     });
 
     onClose();
+  };
+
+  const handleDiscountChange = (newDiscountType) => {
+    setDiscountType(newDiscountType);
+    setDiscountValue("");
+    
+    // Show verification modal for senior/pwd discounts
+    if (newDiscountType === "senior" || newDiscountType === "pwd") {
+      // Reset verification data when changing discount type
+      setVerificationData(null);
+      setShowVerificationModal(true);
+    }
+  };
+
+  const handleVerificationConfirm = (data) => {
+    setVerificationData(data);
+    setShowVerificationModal(false);
+  };
+
+  const handleVerificationCancel = () => {
+    setShowVerificationModal(false);
+    setDiscountType("none");
+    setVerificationData(null);
   };
 
   return (
@@ -148,26 +180,64 @@ export default function PaymentModal({ subtotal = 0, taxRate = 0, taxAmount = 0,
 
           {/* Discount Section */}
           <div className="p-4 bg-blue-50 rounded-lg">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className="block text-sm font-semibold text-gray-700 mb-4">
               Apply Discount
             </label>
 
-            <div className="flex gap-2 mb-3">
-              <select
-                value={discountType}
-                onChange={(e) => {
-                  setDiscountType(e.target.value);
-                  setDiscountValue("");
-                }}
-                className="flex-1 border px-3 py-2 rounded text-sm"
-              >
-                <option value="none">No Discount</option>
-                <option value="senior">Senior Discount</option>
-              </select>
+
+            <div className="flex gap-4 flex-wrap">
+              <label className="inline-flex items-center">
+                <input
+                  type="radio"
+                  name="discountType"
+                  value="none"
+                  checked={discountType === "none"}
+                  onChange={(e) => handleDiscountChange(e.target.value)}
+                  className="form-radio"
+                />
+                <span className="ml-2 text-sm">No Discount</span>
+              </label>
+
+              <label className="inline-flex items-center">
+                <input
+                  type="radio"
+                  name="discountType"
+                  value="senior"
+                  checked={discountType === "senior"}
+                  onChange={(e) => handleDiscountChange(e.target.value)}
+                  className="form-radio"
+                />
+                <span className="ml-2 text-sm">Senior Discount ({SENIOR_DISCOUNT_PERCENTAGE}%)</span>
+              </label>
+
+              <label className="inline-flex items-center">
+                <input
+                  type="radio"
+                  name="discountType"
+                  value="pwd"
+                  checked={discountType === "pwd"}
+                  onChange={(e) => handleDiscountChange(e.target.value)}
+                  className="form-radio"
+                />
+                <span className="ml-2 text-sm">PWD Discount ({PWD_DISCOUNT_PERCENTAGE}%)</span>
+              </label>
             </div>
 
+            {/* Verification Status for Senior/PWD */}
+            {(discountType === "senior" || discountType === "pwd") && (
+              <div className={`text-xs p-2 rounded ${
+                verificationData 
+                  ? "bg-green-100 text-green-700" 
+                  : "bg-yellow-100 text-yellow-700"
+              }`}>
+                {verificationData 
+                  ? `✓ Verified: ${verificationData.fullName}` 
+                  : "⚠ Please verify information"}
+              </div>
+            )}
+
             {discountAmount > 0 && (
-              <p className="text-xs text-blue-600">
+              <p className="text-xs text-blue-600 mt-2">
                 Discount Amount: ₱{discountAmount.toFixed(2)}
               </p>
             )}
@@ -242,6 +312,15 @@ export default function PaymentModal({ subtotal = 0, taxRate = 0, taxAmount = 0,
 
         </div>
       </div>
+
+      {/* Senior/PWD Verification Modal */}
+      {showVerificationModal && (
+        <SeniorPWDVerificationModal
+          discountType={discountType}
+          onConfirm={handleVerificationConfirm}
+          onCancel={handleVerificationCancel}
+        />
+      )}
     </div>
   );
 }
