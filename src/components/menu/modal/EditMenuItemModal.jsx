@@ -255,7 +255,6 @@ export default function EditMenuItemModal({ isOpen, onClose, onSaved, item, cate
               </div>
 
               <div className="flex gap-3 pt-4">
-                <button onClick={() => setModalStep(1)} className="flex-1 bg-gray-100 py-2 rounded">Back</button>
                 <button onClick={handleSave} className="flex-1 bg-green-600 text-white py-2 rounded">Save</button>
               </div>
             </div>
