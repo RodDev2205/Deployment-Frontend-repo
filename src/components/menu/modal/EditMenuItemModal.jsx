@@ -177,7 +177,7 @@ export default function EditMenuItemModal({ isOpen, onClose, onSaved, item, cate
         <div className="overflow-y-auto flex-1 px-6 py-6">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-bold">{modalStep === 1 ? 'Edit Product' : 'Edit Ingredients'}</h3>
-            <button onClick={onClose} className="text-sm text-gray-500">Close</button>
+            <button onClick={onClose} className="text-sm text-gray-500">✕</button>
           </div>
 
           {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded">{error}</div>}
@@ -254,6 +254,7 @@ export default function EditMenuItemModal({ isOpen, onClose, onSaved, item, cate
               </div>
 
               <div className="flex gap-3 pt-4">
+                <button onClick={() => setModalStep(1)} className="bg-gray-600 text-white py-2 px-4 rounded">Back</button>
                 <button onClick={handleSave} className="flex-1 bg-green-600 text-white py-2 rounded">Save</button>
               </div>
             </div>
