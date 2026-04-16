@@ -87,6 +87,13 @@ export default function MenuListTab() {
       await fetchProducts();
       setSelectedProduct(null);
       setNote("");
+
+      // Show success alert
+      if (status === "APPROVED") {
+        success("Success", "Menu item approved successfully!");
+      } else if (status === "DECLINED") {
+        success("Success", "Menu item declined successfully!");
+      }
     } catch (err) {
       console.error("Failed to update status:", err);
     } finally {
