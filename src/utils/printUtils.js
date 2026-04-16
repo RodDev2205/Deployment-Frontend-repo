@@ -49,7 +49,7 @@ export const printReceipt = async (orderData) => {
     receipt.push('\x1B\x61\x00'); // left
     receipt.push(`Time: ${orderData.date}\n`);
     receipt.push(`Receipt No: #${orderData.orderId}\n`);
-    receipt.push(`Cashier: ${orderData.cashierName || 'N/A'}\n`);
+    receipt.push(`${orderData.username || 'Cashier'}\n`);
     receipt.push(`Order Type: ${orderData.orderType}\n`);
     receipt.push(`Payment: ${orderData.paymentMethod}\n`);
     receipt.push('-------------------------------\n');
@@ -69,7 +69,7 @@ export const printReceipt = async (orderData) => {
       receipt.push(`   @ ${unitPriceField}\n`);
     });
     receipt.push('-------------------------------\n');
-    receipt.push(`Subtotal:              PHP${(orderData.subtotal || 0).toFixed(2)}\n`);
+    receipt.push(`Subtotal:               PHP${(orderData.subtotal || 0).toFixed(2)}\n`);
     if (orderData.paymentMethod === "Cash") {
       receipt.push(`Cash:                 PHP${parseFloat(orderData.given).toFixed(2)}\n`);
       receipt.push(`Change:                PHP${parseFloat(orderData.change).toFixed(2)}\n`);
