@@ -49,9 +49,16 @@ export const printReceipt = async (orderData) => {
     receipt.push('\x1B\x61\x00'); // left
     receipt.push(`Time: ${orderData.date}\n`);
     receipt.push(`Receipt No: #${orderData.orderId}\n`);
+    receipt.push(`Cashier: ${orderData.cashierName || 'N/A'}\n`);
     receipt.push(`Order Type: ${orderData.orderType}\n`);
     receipt.push(`Payment: ${orderData.paymentMethod}\n`);
     receipt.push('-------------------------------\n');
+    if (orderData.discountType && orderData.discountType !== 'none') {
+    receipt.push('-------------------------------\n');
+    receipt.push(`Discount: ${orderData.discountType}\n`);
+    if (orderData.discountHolderName) receipt.push(`Name: ${orderData.discountHolderName}\n`);
+    if (orderData.discountHolderId) receipt.push(`ID No: ${orderData.discountHolderId}\n`);
+    }
     receipt.push('Qty  Item                  Price\n');
     receipt.push('-------------------------------\n');
     orderData.cart.forEach(item => {
@@ -64,7 +71,7 @@ export const printReceipt = async (orderData) => {
     receipt.push('-------------------------------\n');
     receipt.push(`Subtotal:              PHP${(orderData.subtotal || 0).toFixed(2)}\n`);
     if (orderData.paymentMethod === "Cash") {
-      receipt.push(`Given:                 PHP${parseFloat(orderData.given).toFixed(2)}\n`);
+      receipt.push(`Cash:                 PHP${parseFloat(orderData.given).toFixed(2)}\n`);
       receipt.push(`Change:                PHP${parseFloat(orderData.change).toFixed(2)}\n`);
     }
     receipt.push(`TOTAL:                 PHP${(orderData.total || 0).toFixed(2)}\n`);
