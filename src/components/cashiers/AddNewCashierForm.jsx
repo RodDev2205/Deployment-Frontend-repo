@@ -4,6 +4,7 @@ import { UserPlus, Eye, EyeOff } from 'lucide-react';
 export default function AddNewCashierForm({ onAddCashier }) {
     const [formData, setFormData] = useState({ 
         first_name: '', 
+        middle_name: '',
         last_name: '', 
         username: '', 
         password: '',
@@ -23,7 +24,7 @@ export default function AddNewCashierForm({ onAddCashier }) {
             lastLogin: 'Never',
         };
         onAddCashier(newCashier);
-        setFormData({ first_name: '', last_name: '', username: '', password: '', contact_number: '' });
+        setFormData({ first_name: '', middle_name: '', last_name: '', username: '', password: '', contact_number: '' });
     };
 
     return (
@@ -31,7 +32,7 @@ export default function AddNewCashierForm({ onAddCashier }) {
             <h3 className="text-xl font-bold text-[#1B5E20] mb-4 flex items-center">
                 <UserPlus className="w-5 h-5 mr-2" /> Register New Cashier Account
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <input 
                     type="text" 
                     name="first_name" 
@@ -40,6 +41,14 @@ export default function AddNewCashierForm({ onAddCashier }) {
                     onChange={handleChange} 
                     className="p-3 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500" 
                     required 
+                />
+                <input 
+                    type="text" 
+                    name="middle_name" 
+                    placeholder="Middle Initial" 
+                    value={formData.middle_name} 
+                    onChange={handleChange} 
+                    className="p-3 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500" 
                 />
                 <input 
                     type="text" 

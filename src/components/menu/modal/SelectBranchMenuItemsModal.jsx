@@ -181,13 +181,6 @@ export default function SelectBranchMenuItemsModal({ isOpen, onClose, onSaved })
         <div className="flex flex-col gap-3 border-t px-6 py-4 bg-white sm:flex-row sm:justify-end">
           <button
             type="button"
-            onClick={onClose}
-            className="w-full rounded-full border border-gray-300 bg-white px-6 py-3 text-sm font-medium text-gray-700 transition hover:bg-gray-50 sm:w-auto"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
             onClick={handleSave}
             disabled={saving}
             className="w-full rounded-full bg-green-600 px-6 py-3 text-sm font-medium text-white transition hover:bg-green-700 disabled:opacity-60 sm:w-auto"

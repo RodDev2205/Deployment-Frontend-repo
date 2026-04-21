@@ -28,7 +28,17 @@ export default function CashierManagement() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to fetch cashiers");
 
-      setCashiers(data);
+      // Restore middle_name from cache if it was saved (backend may not return it)
+      const cashiersWithMiddleNames = data.map(cashier => {
+        const cacheKey = `cashier_${cashier.username}_middle_name`;
+        const cachedMiddleName = localStorage.getItem(cacheKey);
+        return {
+          ...cashier,
+          middle_name: cachedMiddleName || cashier.middle_name || ""
+        };
+      });
+
+      setCashiers(cashiersWithMiddleNames);
     } catch (err) {
       console.error("Error fetching cashiers:", err);
     }
@@ -37,6 +47,13 @@ export default function CashierManagement() {
   const handleAddCashier = async (newCashier) => {
     try {
       const token = localStorage.getItem("token");
+      
+      // Store the middle_name in a local cache to preserve it
+      const cacheKey = `cashier_${newCashier.username}_middle_name`;
+      if (newCashier.middle_name) {
+        localStorage.setItem(cacheKey, newCashier.middle_name);
+      }
+      
       const res = await fetch(`${API_BASE_URL}/api/admin/cashiers`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -46,7 +63,19 @@ export default function CashierManagement() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to add cashier");
 
-      fetchCashiers();
+      // Add cashier to state with middle_name from form (backend may not return it)
+      setCashiers(prev => {
+        const cashierToAdd = {
+          ...data,
+          first_name: newCashier.first_name,
+          middle_name: newCashier.middle_name, // Use form data since backend may not return it
+          last_name: newCashier.last_name,
+          username: newCashier.username,
+          contact_number: newCashier.contact_number,
+        };
+        return [cashierToAdd, ...prev];
+      });
+      
       success("Success", "Cashier added successfully!");
     } catch (err) {
       console.error("Error adding cashier:", err);
@@ -78,11 +107,19 @@ export default function CashierManagement() {
   const handleSaveEdit = async (updatedCashier) => {
     try {
       const token = localStorage.getItem("token");
+      
+      // Cache the middle_name before sending
+      const cacheKey = `cashier_${updatedCashier.username}_middle_name`;
+      if (updatedCashier.middle_name) {
+        localStorage.setItem(cacheKey, updatedCashier.middle_name);
+      }
+      
       const res = await fetch(`${API_BASE_URL}/api/admin/cashiers/${updatedCashier.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           first_name: updatedCashier.first_name,
+          middle_name: updatedCashier.middle_name,
           last_name: updatedCashier.last_name,
           username: updatedCashier.username,
           contact_number: updatedCashier.contact_number,
@@ -95,7 +132,7 @@ export default function CashierManagement() {
       setCashiers(prev =>
         prev.map(c =>
           c.id === updatedCashier.id
-            ? { ...c, first_name: updatedCashier.first_name, last_name: updatedCashier.last_name, username: updatedCashier.username, contact_number: updatedCashier.contact_number }
+            ? { ...c, first_name: updatedCashier.first_name, middle_name: updatedCashier.middle_name, last_name: updatedCashier.last_name, username: updatedCashier.username, contact_number: updatedCashier.contact_number }
             : c
         )
       );

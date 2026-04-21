@@ -12,6 +12,7 @@ export default function AddAdminModal({ isOpen, onClose, onSubmit }) {
 
   const [formData, setFormData] = useState({
     first_name: "",
+    middle_name: "",
     last_name: "",
     username: "",
     password: "",
@@ -62,6 +63,7 @@ export default function AddAdminModal({ isOpen, onClose, onSubmit }) {
 
       const payload = {
         first_name: formData.first_name,
+        middle_name: formData.middle_name,
         last_name: formData.last_name,
         username: formData.username,
         password: formData.password,
@@ -84,11 +86,39 @@ export default function AddAdminModal({ isOpen, onClose, onSubmit }) {
       }
 
       success("Success", "Cashier created successfully!", () => {
-        if (onSubmit) onSubmit();
+        // Find the branch name from branch_id
+        const selectedBranch = branches.find(b => b.branch_id === formData.branch_id);
+        
+        // Cache the middle_name to preserve it (backend may not store it)
+        const cacheKey = `user_${formData.username}_middle_name`;
+        if (formData.middle_name) {
+          localStorage.setItem(cacheKey, formData.middle_name);
+        }
+        
+        // Extract the correct user ID from backend response - check multiple possible locations
+        const userId = data.user?.user_id || data.user?.id || data?.user_id || data?.id || data?.cashierId || data?.user?._id;
+        
+        // Pass the created user data (with middle_name) to parent component
+        const newCashier = {
+          ...data.user,
+          id: userId,
+          user_id: userId,
+          first_name: formData.first_name,
+          middle_name: formData.middle_name,
+          last_name: formData.last_name,
+          username: formData.username,
+          branch_id: formData.branch_id,
+          branch: selectedBranch?.branch_name || "",
+          contact_number: formData.contact_number,
+          status: data.user?.status || "Activate",
+          role_name: data.user?.role_name || "Cashier",
+        };
+        if (onSubmit) onSubmit(newCashier);
         onClose();
         // Reset form
         setFormData({
           first_name: "",
+          middle_name: "",
           last_name: "",
           username: "",
           password: "",
@@ -121,8 +151,8 @@ export default function AddAdminModal({ isOpen, onClose, onSubmit }) {
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
 
-          {/* First & Last Name */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* First, Middle & Last Name */}
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 First Name
@@ -133,6 +163,19 @@ export default function AddAdminModal({ isOpen, onClose, onSubmit }) {
                 required
                 value={formData.first_name}
                 onChange={handleChange}
+                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Middle Initial
+              </label>
+              <input
+                type="text"
+                name="middle_name"
+                value={formData.middle_name}
+                onChange={handleChange}
+                placeholder=""
                 className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:outline-none"
               />
             </div>

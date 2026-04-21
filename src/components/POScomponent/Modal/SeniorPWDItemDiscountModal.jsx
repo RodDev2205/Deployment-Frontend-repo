@@ -80,7 +80,7 @@ export default function SeniorPWDItemDiscountModal({
   const typeLabel = discountType === 'senior' ? 'Senior Citizen' : 'Person with Disability (PWD)';
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-transparent backdrop-blur-sm flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
           <h2 className="text-xl font-bold text-white">{typeLabel} - Item Discount Selection</h2>

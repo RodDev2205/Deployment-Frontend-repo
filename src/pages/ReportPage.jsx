@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Download, Calendar, Filter, TrendingUp, PhilippinePeso, Package, Users, BarChart3 } from 'lucide-react';
+import { Download, Calendar, Filter, TrendingUp, PhilippinePeso, Package, Users, BarChart3, ChevronUp, ChevronDown } from 'lucide-react';
 import API_BASE_URL from '../config/api';
 import {
   LineChart,
@@ -20,54 +20,28 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 export default function ReportPage() {
-  const [dateRange, setDateRange] = useState('daily');
+  const today = new Date();
+  const sevenDaysAgo = new Date(today);
+  sevenDaysAgo.setDate(today.getDate() - 7);
+  
+  const formatDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  
+  const [startDate, setStartDate] = useState(formatDate(sevenDaysAgo));
+  const [endDate, setEndDate] = useState(formatDate(today));
   const [selectedBranch, setSelectedBranch] = useState('all');
   const [branches, setBranches] = useState([]);
+
+  // Calendar states
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
 
   // sales trend data fetched from backend
   const [trendData, setTrendData] = useState([]);
 
-  // helper: convert DB rows into chart-compatible format based on the currently selected period
+  // helper: convert DB rows into chart-compatible format
   const transformTrend = (rows) => {
     return rows.map((r) => {
-      let label = r.period_key;
-      switch (dateRange) {
-        case 'daily': { // convert iso date to weekday abbreviation
-          const d = new Date(r.period_key);
-          const weekday = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-          label = weekday[d.getDay()];
-          break;
-        }
-        case 'weekly': {
-          // r.period_key like "2023-05" -> "W5" (week number)
-          const parts = r.period_key.split('-');
-          label = `W${parseInt(parts[1], 10)}`;
-          break;
-        }
-        case 'monthly': {
-          const [year, mon] = r.period_key.split('-');
-          const m = new Date(year, mon - 1).toLocaleString('en-US', { month: 'short' });
-          label = `${m}`;
-          break;
-        }
-        case 'quarterly': {
-          // r.period_key like "2023-Q2" or "2023-Q1"
-          const parts = r.period_key.split('-Q');
-          if (parts.length === 2) {
-            label = `Q${parts[1]} ${parts[0]}`;
-          } else {
-            label = r.period_key;
-          }
-          break;
-        }
-        case 'yearly': {
-          label = r.period_key;
-          break;
-        }
-        default:
-          break;
-      }
-      return { date: label, sales: r.total_sales };
+      return { date: r.period_key, sales: r.total_sales };
     });
   };
 
@@ -235,58 +209,78 @@ export default function ReportPage() {
 
   const formatCurrency = (n) => `₱${Number(n || 0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
 
-  const getPreviousRangeDates = (range) => {
-    const today = new Date();
-    let start = new Date();
-    let end = new Date();
-    if (range === 'daily') {
-      // Previous day
-      start = new Date(today);
-      start.setDate(today.getDate() - 1);
-      end = new Date(start);
-    } else if (range === 'weekly') {
-      // Previous week (7 days before current week)
-      start = new Date(today);
-      start.setDate(today.getDate() - 13);
-      end = new Date(today);
-      end.setDate(today.getDate() - 7);
-    } else if (range === 'monthly') {
-      // Previous month
-      start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-      end = new Date(today.getFullYear(), today.getMonth(), 0);
-    } else if (range === 'quarterly') {
-      // Previous quarter
-      const currentQuarter = Math.floor(today.getMonth() / 3);
-      const prevQuarter = currentQuarter - 1;
-      const prevYear = prevQuarter < 0 ? today.getFullYear() - 1 : today.getFullYear();
-      const prevQuarterMonth = prevQuarter < 0 ? 9 : prevQuarter * 3;
-      start = new Date(prevYear, prevQuarterMonth, 1);
-      end = new Date(prevYear, prevQuarterMonth + 3, 0);
-    } else if (range === 'yearly') {
-      // Previous year
-      start = new Date(today.getFullYear() - 1, 0, 1);
-      end = new Date(today.getFullYear() - 1, 11, 31);
-    }
-    const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    return { startDate: fmt(start), endDate: fmt(end) };
+  // Calendar Helper Functions
+  const getDaysInMonth = (date) => new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  const getFirstDayOfMonth = (date) => new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+
+  const handleDateSelect = (day) => {
+    const selectedDate = new Date(calendarMonth);
+    selectedDate.setDate(day);
+    const formatted = formatDate(selectedDate);
+    setStartDate(formatted);
+    setShowCalendar(false);
   };
 
-  const getRangeDates = (range) => {
-    const today = new Date();
-    let start = new Date();
-    if (range === 'daily') {
-      start = new Date(today);
-    } else if (range === 'weekly') {
-      start.setDate(today.getDate() - 6);
-    } else if (range === 'monthly') {
-      start = new Date(today.getFullYear(), today.getMonth(), 1);
-    } else if (range === 'quarterly') {
-      start = new Date(today.getFullYear(), today.getMonth() - 2, 1);
-    } else if (range === 'yearly') {
-      start = new Date(today.getFullYear(), 0, 1);
+  const resetDates = () => {
+    setStartDate(formatDate(sevenDaysAgo));
+    setEndDate(formatDate(today));
+    setShowCalendar(false);
+  };
+
+  const setToday = () => {
+    const todayFormatted = formatDate(new Date());
+    setStartDate(todayFormatted);
+    setShowCalendar(false);
+  };
+
+  const renderCalendar = () => {
+    const daysInMonth = getDaysInMonth(calendarMonth);
+    const firstDay = getFirstDayOfMonth(calendarMonth);
+    const days = [];
+
+    // Empty cells for days before month starts
+    for (let i = 0; i < firstDay; i++) {
+      days.push(<div key={`empty-${i}`} className="text-center py-2"></div>);
     }
+
+    // Days of month
+    for (let day = 1; day <= daysInMonth; day++) {
+      const cellDate = formatDate(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), day));
+      const isSelected = cellDate === startDate;
+      days.push(
+        <button
+          key={day}
+          onClick={() => handleDateSelect(day)}
+          className={`text-center py-2 text-sm rounded-lg transition ${
+            isSelected 
+              ? 'bg-blue-500 text-white font-bold' 
+              : 'hover:bg-gray-100 text-gray-700'
+          }`}
+        >
+          {day}
+        </button>
+      );
+    }
+
+    return days;
+  };
+
+  const getPreviousRangeDates = () => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const diffDays = Math.floor((end - start) / (1000 * 60 * 60 * 24));
+    
+    const prevStart = new Date(start);
+    prevStart.setDate(prevStart.getDate() - (diffDays + 1));
+    const prevEnd = new Date(start);
+    prevEnd.setDate(prevEnd.getDate() - 1);
+    
     const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    return { startDate: fmt(start), endDate: fmt(today) };
+    return { startDate: fmt(prevStart), endDate: fmt(prevEnd) };
+  };
+
+  const getRangeDates = () => {
+    return { startDate, endDate };
   };
 
   useEffect(() => {
@@ -319,15 +313,15 @@ export default function ReportPage() {
       try {
         const token = localStorage.getItem('token');
         if (!token) return;
-        const { startDate, endDate } = getRangeDates(dateRange);
+        const { startDate: currStart, endDate: currEnd } = getRangeDates();
         const branchParam = selectedBranch && selectedBranch !== 'all' ? `&branchId=${selectedBranch}` : '';
-        const res = await fetch(`${API_BASE_URL}/api/sales-superadmin/kpis?startDate=${startDate}&endDate=${endDate}${branchParam}`, {
+        const res = await fetch(`${API_BASE_URL}/api/sales-superadmin/kpis?startDate=${currStart}&endDate=${currEnd}${branchParam}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (!res.ok) throw new Error('Failed to fetch KPIs');
         const data = await res.json();
         // Fetch previous period data for growth calculation
-        const { startDate: prevStart, endDate: prevEnd } = getPreviousRangeDates(dateRange);
+        const { startDate: prevStart, endDate: prevEnd } = getPreviousRangeDates();
         let prevData = null;
         try {
           const prevRes = await fetch(`${API_BASE_URL}/api/sales-superadmin/kpis?startDate=${prevStart}&endDate=${prevEnd}${branchParam}`, {
@@ -361,7 +355,7 @@ export default function ReportPage() {
           { title: 'Gross Sales', value: formatCurrency(data.gross_sales), change: '', icon: PhilippinePeso, color: 'bg-blue-100 text-blue-600' },
           { title: 'Voided Sales', value: formatCurrency(data.voided_sales), change: '', icon: PhilippinePeso, color: 'bg-red-100 text-red-600' },
           { title: 'Total Sales', value: formatCurrency(data.total_sales), change: `(Gross - Voided)`, icon: PhilippinePeso, color: 'bg-green-100 text-green-600' },
-          { title: 'Sales Growth', value: salesGrowth, change: `vs Previous ${dateRange.charAt(0).toUpperCase() + dateRange.slice(1)}`, icon: TrendingUp, color: 'bg-purple-100 text-purple-600' },
+          { title: 'Sales Growth', value: salesGrowth, change: 'vs Previous Period', icon: TrendingUp, color: 'bg-purple-100 text-purple-600' },
           { title: 'Total Transactions', value: data.transaction_count?.toString() || '0', change: '', icon: BarChart3, color: 'bg-indigo-100 text-indigo-600' },
           { title: 'Average Order Value', value: formatCurrency(data.avg_order_value), change: '(Total Sales ÷ Orders)', icon: TrendingUp, color: 'bg-orange-100 text-orange-600' },
           { title: 'Active Branches', value: data.active_branches?.toString() || '0', change: '', icon: Package, color: 'bg-pink-100 text-pink-600' },
@@ -378,20 +372,9 @@ export default function ReportPage() {
         const token = localStorage.getItem('token');
         if (!token) return;
         // KPIs use normal range
-        const { startDate, endDate } = getRangeDates(dateRange);
-        // trend sometimes needs a broader window (e.g. daily should show past 7 days)
-        let trendStart = startDate;
-        let trendEnd = endDate;
-        if (dateRange === 'daily') {
-          const now = new Date();
-          const past = new Date(now);
-          past.setDate(now.getDate() - 6);
-          const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-          trendStart = fmt(past);
-          trendEnd = fmt(now);
-        }
+        const { startDate: trendStart, endDate: trendEnd } = getRangeDates();
         const branchParam = selectedBranch && selectedBranch !== 'all' ? `&branchId=${selectedBranch}` : '';
-        const res = await fetch(`${API_BASE_URL}/api/sales-superadmin/sales-trend?period=${dateRange}&startDate=${trendStart}&endDate=${trendEnd}${branchParam}`, {
+        const res = await fetch(`${API_BASE_URL}/api/sales-superadmin/sales-trend?startDate=${trendStart}&endDate=${trendEnd}${branchParam}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (!res.ok) throw new Error('Failed to fetch trend');
@@ -409,8 +392,8 @@ export default function ReportPage() {
       try {
         const token = localStorage.getItem('token');
         if (!token) return;
-        const { startDate, endDate } = getRangeDates(dateRange);
-        const res = await fetch(`${API_BASE_URL}/api/sales-superadmin/branch-comparison?startDate=${startDate}&endDate=${endDate}`, {
+        const { startDate: currStart, endDate: currEnd } = getRangeDates();
+        const res = await fetch(`${API_BASE_URL}/api/sales-superadmin/branch-comparison?startDate=${currStart}&endDate=${currEnd}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (!res.ok) throw new Error('Failed to fetch branch comparison');
@@ -427,9 +410,9 @@ export default function ReportPage() {
       try {
         const token = localStorage.getItem('token');
         if (!token) return;
-        const { startDate, endDate } = getRangeDates(dateRange);
+        const { startDate: currStart, endDate: currEnd } = getRangeDates();
         const branchParam = selectedBranch && selectedBranch !== 'all' ? `&branchId=${selectedBranch}` : '';
-        const res = await fetch(`${API_BASE_URL}/api/sales-superadmin/top-menu-items?startDate=${startDate}&endDate=${endDate}${branchParam}`, {
+        const res = await fetch(`${API_BASE_URL}/api/sales-superadmin/top-menu-items?startDate=${currStart}&endDate=${currEnd}${branchParam}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (!res.ok) {
@@ -450,9 +433,9 @@ export default function ReportPage() {
       try {
         const token = localStorage.getItem('token');
         if (!token) return;
-        const { startDate, endDate } = getRangeDates(dateRange);
+        const { startDate: currStart, endDate: currEnd } = getRangeDates();
         const branchParam = selectedBranch && selectedBranch !== 'all' ? `&branchId=${selectedBranch}` : '';
-        const res = await fetch(`${API_BASE_URL}/api/sales-superadmin/void-transactions?startDate=${startDate}&endDate=${endDate}${branchParam}`, {
+        const res = await fetch(`${API_BASE_URL}/api/sales-superadmin/void-transactions?startDate=${currStart}&endDate=${currEnd}${branchParam}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (!res.ok) {
@@ -468,7 +451,7 @@ export default function ReportPage() {
       }
     };
     fetchVoidTransactions();
-  }, [dateRange, selectedBranch, refreshKey]);
+  }, [startDate, endDate, selectedBranch, refreshKey]);
 
   const handleExportPDF = () => {
     const doc = new jsPDF('p', 'pt', 'a4');
@@ -562,19 +545,61 @@ export default function ReportPage() {
         <div className="bg-white rounded-2xl shadow-sm p-6">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-4 flex-wrap">
-              <div className="flex items-center gap-2">
-                <Calendar size={20} className="text-gray-600" />
-                <select
-                  value={dateRange}
-                  onChange={(e) => setDateRange(e.target.value)}
-                  className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+              {/* Date Calendar */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowCalendar(!showCalendar)}
+                  className="flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-2 hover:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500"
                 >
-                  <option value="daily">Daily</option>
-                  <option value="weekly">Weekly</option>
-                  <option value="monthly">Monthly</option>
-                  <option value="quarterly">Quarterly</option>
-                  <option value="yearly">Yearly</option>
-                </select>
+                  <Calendar size={18} className="text-gray-600" />
+                  <span className="text-sm font-medium">{startDate}</span>
+                </button>
+                
+                {showCalendar && (
+                  <div className="absolute left-0 mt-2 bg-white border border-gray-300 rounded-lg shadow-lg p-4 z-50 w-80">
+                    <div className="flex items-center justify-between mb-4">
+                      <button
+                        onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1))}
+                        className="p-1 hover:bg-gray-100 rounded"
+                      >
+                        <ChevronUp size={20} className="text-gray-600" />
+                      </button>
+                      <span className="font-semibold text-gray-800">
+                        {calendarMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                      </span>
+                      <button
+                        onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1))}
+                        className="p-1 hover:bg-gray-100 rounded"
+                      >
+                        <ChevronDown size={20} className="text-gray-600" />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-7 gap-2 mb-4">
+                      {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
+                        <div key={day} className="text-center text-xs font-bold text-gray-600 py-2">
+                          {day}
+                        </div>
+                      ))}
+                      {renderCalendar()}
+                    </div>
+
+                    <div className="flex gap-2 justify-between">
+                      <button
+                        onClick={resetDates}
+                        className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                      >
+                        Clear
+                      </button>
+                      <button
+                        onClick={setToday}
+                        className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                      >
+                        Today
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center gap-2">
@@ -635,7 +660,7 @@ export default function ReportPage() {
         {/* Sales Trend Chart */}
         <div className="bg-white rounded-2xl shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">
-          Sales Trend {'(' + (dateRange === 'daily' ? 'Last 7 Days' : dateRange.charAt(0).toUpperCase() + dateRange.slice(1)) + ')'}
+          Sales Trend ({startDate} to {endDate})
         </h2>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={trendData}>

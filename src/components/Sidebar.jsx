@@ -13,8 +13,7 @@ const Sidebar = ({
   // define which items should be preceded by a divider line
   const dividerNames = [
     'Menu',
-    'Menu & Inventory',       // put a line above the dashboard/chat group,       // separate menu/management from inventory group
-    'Reports'          // put a line above reports/logs/settings group
+    'Reports'
   ];
 
   return (

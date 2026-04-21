@@ -4,9 +4,11 @@ import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 import {
   LayoutDashboard,
-  Split,
-  BookOpen,
   SquareMenu,
+  Package,
+  Building2,
+  Users,
+  BookOpen,
   History,
   MessageCircleMore,
   Settings,
@@ -42,8 +44,10 @@ export default function OwnerDashboard() {
   const navItems = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/superadmin/dashboard" },
     { name: "Chat Room", icon: MessageCircleMore, path: "/superadmin/chat-room" },
-    { name: "Menu & Inventory", icon: SquareMenu, path: "/superadmin/menu-inventory" },
-    { name: "Management", icon: Split, path: "/superadmin/management" },
+    { name: "Menu", icon: SquareMenu, path: "/superadmin/menu" },
+    { name: "Inventory", icon: Package, path: "/superadmin/inventory" },
+    { name: "Branch Management", icon: Building2, path: "/superadmin/branch-management" },
+    { name: "User Management", icon: Users, path: "/superadmin/user-management" },
     { name: "Reports", icon: BookOpen, path: "/superadmin/reports" },
     { name: "Logs", icon: History, path: "/superadmin/logs" },
     { name: "Settings", icon: Settings, path: "/superadmin/settings" },

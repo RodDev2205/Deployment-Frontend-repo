@@ -82,7 +82,7 @@ export default function ViewUserModal({ isOpen, onClose, user, onEdit }) {
           <h3 className="text-gray-600 font-semibold mb-3">Basic Information</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-6 text-sm">
             <span className="text-gray-500">Full Name:</span>
-            <span className="font-medium">{displayValue(userData.first_name)} {displayValue(userData.last_name)}</span>
+            <span className="font-medium">{displayValue(userData.first_name)} {userData.middle_name ? displayValue(userData.middle_name) : ""} {displayValue(userData.last_name)}</span>
 
             <span className="text-gray-500">Username:</span>
             <span className="font-medium">{displayValue(userData.username)}</span>

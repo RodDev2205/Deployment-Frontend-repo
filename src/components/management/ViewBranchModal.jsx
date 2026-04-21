@@ -61,6 +61,13 @@ export default function ViewBranchModal({ isOpen, onClose, branch }) {
             <InfoItem label="Name" value={branch.name || branch.branchName} />
             <InfoItem label="Contact Person" value={formatContactPerson()} />
             <InfoItem label="Location" value={branch.locationText || "No saved location"} />
+            <InfoItem label="Operating Days" value={
+              branch.operatingDays && branch.operatingDays.length > 0
+                ? Array.isArray(branch.operatingDays)
+                  ? branch.operatingDays.join(", ")
+                  : branch.operatingDays
+                : "--"
+            } />
             <InfoItem label="Opening Time" value={formatTime(branch.openingTime)} />
             <InfoItem label="Closing Time" value={formatTime(branch.closingTime)} />
             <InfoItem label="Status" value={

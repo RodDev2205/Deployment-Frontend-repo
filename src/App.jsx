@@ -8,11 +8,14 @@ import POS from "./pages/POS";
 import SuperAdminDashboard from "./pages/OwnerDashboard";
 import DashboardPage from "./pages/OwnerDashboardPage";
 import ManagementPage from "./pages/ManagementPage";
+import BranchManagementPage from "./pages/BranchManagementPage";
+import UserManagementPage from "./pages/UserManagementPage";
 import ReportPage from "./pages/ReportPage";
 import LogsPage from "./pages/LogsPage";
 import SettingsPage from "./pages/SettingsPage";
 import ChatRoomPage from "./pages/ChatRoomPage";
 import MenuListPage from "./pages/MenuListPage";
+import InventoryPage from "./pages/InventoryPage";
 import HomePage from "./pages/HomePage";
 
 
@@ -48,8 +51,10 @@ function App() {
           <Route index element={<DashboardPage />} />
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="chat-room" element={<ChatRoomPage />} />
-          <Route path="menu-inventory" element={<MenuListPage />} />
-          <Route path="management" element={<ManagementPage />} />
+          <Route path="menu" element={<MenuListPage />} />
+          <Route path="inventory" element={<InventoryPage />} />
+          <Route path="branch-management" element={<BranchManagementPage />} />
+          <Route path="user-management" element={<UserManagementPage />} />
           <Route path="reports" element={<ReportPage />} />
           <Route path="logs" element={<LogsPage />} />
           <Route path="settings" element={<SettingsPage />} /> {/* Only superadmin can see this */}

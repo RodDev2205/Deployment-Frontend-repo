@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useAlert } from "@/context/AlertContext";
 import API_BASE_URL from '../../config/api';
 import { UserCircle, Users, Lock, Unlock, Eye, Pencil } from "lucide-react";
+import AlertDialog from "../common/AlertDialog";
 
 import AddAdminModal from "./AddAdmin";
 import AddCashierModal from "./AddCashier";
@@ -20,6 +21,10 @@ export default function UserList({ type }) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const [isSuccessDialogOpen, setIsSuccessDialogOpen] = useState(false);
+  const [userToDeactivate, setUserToDeactivate] = useState(null);
+  const [successMessage, setSuccessMessage] = useState("");
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filterBranch, setFilterBranch] = useState("");
@@ -39,8 +44,19 @@ export default function UserList({ type }) {
       if (!res.ok) throw new Error("Failed to fetch users");
 
       const data = await res.json();
-      setUsers(data || []);
-      setFilteredUsers(data || []);
+      
+      // Restore middle_name from cache (backend may not return it)
+      const usersWithMiddleNames = (data || []).map(user => {
+        const cacheKey = `user_${user.username}_middle_name`;
+        const cachedMiddleName = localStorage.getItem(cacheKey);
+        return {
+          ...user,
+          middle_name: cachedMiddleName || user.middle_name || ""
+        };
+      });
+      
+      setUsers(usersWithMiddleNames || []);
+      setFilteredUsers(usersWithMiddleNames || []);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -81,7 +97,7 @@ export default function UserList({ type }) {
       temp = temp.filter((user) => {
         // build a searchable name string (some APIs return first_name/last_name)
         const nameStr =
-          (user.name || `${user.first_name || ""} ${user.last_name || ""}`)
+          (user.name || `${user.first_name || ""} ${user.middle_name || ""} ${user.last_name || ""}`)
             .toString()
             .toLowerCase();
         const usernameStr = (user.username || "").toString().toLowerCase();
@@ -99,6 +115,11 @@ export default function UserList({ type }) {
   // ==============================
   // Toggle user status
   // ==============================
+  const showConfirmDialog = (user) => {
+    setUserToDeactivate(user);
+    setIsConfirmDialogOpen(true);
+  };
+
   const toggleStatus = async (userId, currentStatus) => {
     const token = localStorage.getItem("token");
     const newStatus = currentStatus === "Activate" ? "Deactivate" : "Activate";
@@ -125,6 +146,14 @@ export default function UserList({ type }) {
             : user
         )
       );
+
+      // Show success dialog
+      const userName = `${userToDeactivate?.first_name} ${userToDeactivate?.middle_name || ''} ${userToDeactivate?.last_name}`;
+      const action = newStatus === "Deactivate" ? "deactivated" : "activated";
+      setSuccessMessage(`${userName} has been ${action} successfully`);
+      setIsSuccessDialogOpen(true);
+      setIsConfirmDialogOpen(false);
+      setUserToDeactivate(null);
     } catch (err) {
       alertError("Error", err.message);
     }
@@ -134,6 +163,11 @@ export default function UserList({ type }) {
   // Add new user to list (from modal)
   // ==============================
   const handleAddUser = (newUser) => {
+    // Cache the middle_name to preserve it (backend may not store it)
+    const cacheKey = `user_${newUser.username}_middle_name`;
+    if (newUser.middle_name) {
+      localStorage.setItem(cacheKey, newUser.middle_name);
+    }
     setUsers((prev) => [newUser, ...prev]); // add to top of list
   };
 
@@ -141,6 +175,12 @@ export default function UserList({ type }) {
   // Update a single user after edit
   // ==============================
   const handleUpdateUser = (updatedUser) => {
+    // Cache the updated middle_name
+    const cacheKey = `user_${updatedUser.username}_middle_name`;
+    if (updatedUser.middle_name) {
+      localStorage.setItem(cacheKey, updatedUser.middle_name);
+    }
+    
     const updatedId = updatedUser.id || updatedUser.user_id;
 
     // Update main users list
@@ -156,6 +196,11 @@ export default function UserList({ type }) {
         (user.id || user.user_id) === updatedId ? { ...user, ...updatedUser } : user
       )
     );
+
+    // Update selectedUser if it's the one being edited, so ViewUserModal shows updated data
+    if (selectedUser && (selectedUser.id || selectedUser.user_id) === updatedId) {
+      setSelectedUser((prev) => ({ ...prev, ...updatedUser }));
+    }
   };
 
   // ==============================
@@ -277,8 +322,8 @@ export default function UserList({ type }) {
                   const isActive = user.status === "Activate";
 
                 return (
-                  <tr key={userId} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 text-sm font-medium text-gray-800">{user.first_name} {user.last_name}</td>
+                  <tr key={userId || user.username || Math.random()} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 text-sm font-medium text-gray-800">{user.first_name} {user.middle_name || ''} {user.last_name}</td>
                     <td className="px-6 py-4 text-sm text-gray-600">{user.branch || "—"}</td>
                     <td className="px-6 py-4 text-sm text-gray-600">{user.username}</td>
                     <td className="px-6 py-4">
@@ -309,7 +354,7 @@ export default function UserList({ type }) {
                         </button>
 
                         <button
-                          onClick={() => toggleStatus(userId, user.status)}
+                          onClick={() => showConfirmDialog(user)}
                           className={`rounded-full p-2 transition ${
                             isActive
                               ? "bg-green-100 text-green-600 hover:bg-green-200"
@@ -358,6 +403,45 @@ export default function UserList({ type }) {
         isOpen={isViewModalOpen}
         user={selectedUser}
         onClose={handleCloseViewModal}
+      />
+
+      {/* Confirmation Dialog */}
+      {userToDeactivate && (
+        <AlertDialog
+          isOpen={isConfirmDialogOpen}
+          type={userToDeactivate?.status === "Activate" ? "warning" : "success"}
+          title={userToDeactivate?.status === "Activate" ? "Confirm Deactivation" : "Confirm Activation"}
+          message={userToDeactivate?.status === "Activate" 
+            ? `Are you sure you want to deactivate ${userToDeactivate?.first_name} ${userToDeactivate?.middle_name || ''} ${userToDeactivate?.last_name}?`
+            : `Are you sure you want to reactivate ${userToDeactivate?.first_name} ${userToDeactivate?.middle_name || ''} ${userToDeactivate?.last_name}?`
+          }
+          confirmText={userToDeactivate?.status === "Activate" ? "Deactivate" : "Reactivate"}
+          cancelText="Cancel"
+          onConfirm={() => {
+            const userId = userToDeactivate?.id || userToDeactivate?.user_id;
+            const currentStatus = userToDeactivate?.status;
+            toggleStatus(userId, currentStatus);
+          }}
+          onClose={() => {
+            setIsConfirmDialogOpen(false);
+            setUserToDeactivate(null);
+          }}
+          showConfirmButton={true}
+          showCancelButton={true}
+          isDanger={userToDeactivate?.status === "Activate"}
+        />
+      )}
+
+      {/* Success Dialog */}
+      <AlertDialog
+        isOpen={isSuccessDialogOpen}
+        type="success"
+        title="Success"
+        message={successMessage}
+        confirmText="OK"
+        onClose={() => setIsSuccessDialogOpen(false)}
+        showConfirmButton={true}
+        showCancelButton={false}
       />
     </div>
   );

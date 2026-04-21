@@ -16,7 +16,6 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
     product_name: "",
     category_id: "",
     price: "",
-    vat_type: "vat",
     file: null,
     ingredients: [],
   });
@@ -25,7 +24,9 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
   // Ingredients from API
   const [fetchedIngredients, setFetchedIngredients] = useState([]);
   const [loadingIngredients, setLoadingIngredients] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [ingredientSearchTerm, setIngredientSearchTerm] = useState("");
+  const [ingredientCategoryFilter, setIngredientCategoryFilter] = useState("");
+  const [ingredientCategories, setIngredientCategories] = useState([]);
 
   // Categories from API (always fetch for fresh database data)
   const [localCategories, setLocalCategories] = useState([]);
@@ -58,10 +59,12 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
   const isSuperadmin = roleId === 3;
   const totalSteps = isSuperadmin ? 1 : 2;
 
-  // Filter ingredients based on search term
-  const filteredIngredients = fetchedIngredients.filter((ing) =>
-    ing.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter ingredients based on search term and category
+  const filteredIngredients = fetchedIngredients.filter((ing) => {
+    const matchesSearch = ing.name.toLowerCase().includes(ingredientSearchTerm.toLowerCase());
+    const matchesCategory = !ingredientCategoryFilter || ing.category === ingredientCategoryFilter;
+    return matchesSearch && matchesCategory;
+  });
 
   const productNameRef = useRef(null);
 
@@ -103,7 +106,7 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
-  // display fetched ingredients (always from API)
+  // display fetched ingredients with search and category filters
   const displayIngredients = filteredIngredients;
 
   // display API categories (or fallback to prop if API fetch failed)
@@ -130,6 +133,9 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
     setSuccess(false);
     // reset ingredient list
     setFetchedIngredients([]);
+    setIngredientSearchTerm("");
+    setIngredientCategoryFilter("");
+    setIngredientCategories([]);
     onClose();
   };
 
@@ -201,9 +207,14 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
         stock_units: i.stock_units ?? 0,
         total_servings: i.total_servings ?? 0,
         status: i.status ?? "unknown",
+        category: i.category_name ?? i.category ?? "",
       }));
 
       setFetchedIngredients(normalized);
+      
+      // Extract unique categories from ingredients
+      const uniqueCategories = [...new Set(normalized.map(item => item.category).filter(Boolean))];
+      setIngredientCategories(uniqueCategories);
     } catch (err) {
       console.error(err);
       setError(err.message || "Failed to load ingredients");
@@ -214,6 +225,13 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
 
   const handleAdd = async () => {
     setError("");
+    
+    // Validate that at least one ingredient is linked
+    if (!isSuperadmin && newItem.ingredients.length === 0) {
+      setError("Please select at least one inventory item before creating the menu item");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -228,7 +246,7 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
       formData.append("product_name", newItem.product_name.trim());
       formData.append("category_id", newItem.category_id);
       formData.append("price", parseFloat(newItem.price));
-      formData.append("vat_type", newItem.vat_type);
+      formData.append("vat_type", "vat");
       if (newItem.file) {
         formData.append("image", newItem.file);
       }
@@ -403,37 +421,6 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
                 />
               </div>
 
-              {/* VAT Type */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">VAT Type *</label>
-                <div className="flex gap-6">
-                  <label className="inline-flex items-center">
-                    <input
-                      type="radio"
-                      name="vat_type"
-                      value="vat"
-                      checked={newItem.vat_type === "vat"}
-                      onChange={(e) => setNewItem({ ...newItem, vat_type: e.target.value })}
-                      disabled={loading}
-                      className="form-radio"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">VATable</span>
-                  </label>
-                  <label className="inline-flex items-center">
-                    <input
-                      type="radio"
-                      name="vat_type"
-                      value="non-vat"
-                      checked={newItem.vat_type === "non-vat"}
-                      onChange={(e) => setNewItem({ ...newItem, vat_type: e.target.value })}
-                      disabled={loading}
-                      className="form-radio"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">Non-VATable</span>
-                  </label>
-                </div>
-              </div>
-
               {/* Image Upload */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Product Image</label>
@@ -495,99 +482,86 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
                 Select ingredients for <span className="font-semibold text-gray-800">{newItem.product_name}</span>
               </p>
 
-              <div className="max-h-72 overflow-y-auto rounded-2xl border border-gray-200 bg-gray-50 p-4">
-                <div className="mb-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Available Inventory Items</h4>
-                  <div className="mb-3">
-                    <input
-                      type="text"
-                      placeholder="Search ingredients..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    {displayIngredients.length > 0 ? (
-                      displayIngredients.map((ing) => {
-                        const selectedItem = newItem.ingredients.find((i) => i.id === ing.id);
-                        return (
-                          <div key={ing.id} className="p-3 bg-white rounded-lg border border-gray-200 hover:border-green-300 transition">
-                            <div className="flex items-center gap-3">
-                              <label className="flex items-center">
-                                <input
-                                  type="checkbox"
-                                  checked={!!selectedItem}
-                                  onChange={() => {
-                                    if (selectedItem) {
-                                      setNewItem((prev) => ({
-                                        ...prev,
-                                        ingredients: prev.ingredients.filter((i) => i.id !== ing.id),
-                                      }));
-                                    } else {
-                                      setNewItem((prev) => ({
-                                        ...prev,
-                                        ingredients: [...prev.ingredients, { id: ing.id, quantity: 1 }],
-                                      }));
-                                    }
-                                  }}
-                                  className="h-4 w-4 text-green-600 border-gray-300 rounded"
-                                />
-                              </label>
-                              <div className="flex-1">
-                                <div className="flex items-center justify-between">
-                                  <span className="font-medium text-gray-700">{ing.name}</span>
-                                  <span className={`text-xs px-2 py-1 rounded ${
-                                    ing.status === 'available' ? 'bg-green-100 text-green-700' :
-                                    ing.status === 'low_stock' ? 'bg-yellow-100 text-yellow-700' :
-                                    'bg-red-100 text-red-700'
-                                  }`}>
-                                    {ing.status}
-                                  </span>
-                                </div>
-                                <div className="text-xs text-gray-500 mt-1">
-                                  Servings: {ing.total_servings ?? 0}
-                                </div>
-                                {selectedItem && (
-                                  <div className="mt-2 flex items-center gap-2">
-                                    <label className="text-sm text-gray-700">Servings:</label>
-                                    <input
-                                      type="number"
-                                      min="0.01"
-                                      step="0.01"
-                                      value={selectedItem.quantity}
-                                      onChange={(e) => {
-                                        const qty = parseFloat(e.target.value) || 0;
-                                        if (qty <= 0) {
-                                          setNewItem((prev) => ({
-                                            ...prev,
-                                            ingredients: prev.ingredients.filter((i) => i.id !== ing.id),
-                                          }));
-                                        } else {
-                                          setNewItem((prev) => ({
-                                            ...prev,
-                                            ingredients: prev.ingredients.map((i) =>
-                                              i.id === ing.id ? { ...i, quantity: qty } : i
-                                            ),
-                                          }));
-                                        }
-                                      }}
-                                      className="w-20 border border-gray-200 rounded-lg p-2 text-sm"
-                                    />
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })
-                    ) : (
-                      <p className="text-center text-sm text-gray-500 py-4">
-                        {fetchedIngredients.length === 0 ? "No inventory items available for your branch." : "No ingredients match your search."}
-                      </p>
-                    )}
-                  </div>
+              {/* Search and Category Filter */}
+              <div className="flex flex-col md:flex-row gap-3">
+                <div className="flex-1">
+                  <input
+                    type="text"
+                    placeholder="Search ingredients..."
+                    value={ingredientSearchTerm}
+                    onChange={(e) => setIngredientSearchTerm(e.target.value)}
+                    className="w-full border border-gray-200 p-3 rounded-2xl focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none transition-all text-sm"
+                  />
                 </div>
+                <div className="flex-1">
+                  <select
+                    value={ingredientCategoryFilter}
+                    onChange={(e) => setIngredientCategoryFilter(e.target.value)}
+                    className="w-full border border-gray-200 p-3 rounded-2xl focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none transition-all text-sm"
+                  >
+                    <option value="">All Categories</option>
+                    {ingredientCategories.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="max-h-72 overflow-y-auto space-y-3 border border-gray-200 rounded-2xl p-4 bg-gray-50">
+                {displayIngredients.length > 0 ? (
+                  displayIngredients.map((ing) => {
+                    const selectedIng = newItem.ingredients.find((i) => i.id === ing.id);
+                    const isSelected = !!selectedIng;
+                    const ingQty = selectedIng?.quantity || 1;
+                    return (
+                      <div key={ing.id} className={`flex items-center gap-4 p-3 rounded-xl border transition ${isSelected ? 'bg-green-50 border-green-300' : 'bg-white border-gray-100 hover:border-green-300'}`}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {
+                            if (isSelected) {
+                              setNewItem({
+                                ...newItem,
+                                ingredients: newItem.ingredients.filter(i => i.id !== ing.id)
+                              });
+                            } else {
+                              setNewItem({
+                                ...newItem,
+                                ingredients: [...newItem.ingredients, { id: ing.id, quantity: 1 }]
+                              });
+                            }
+                          }}
+                          disabled={loading}
+                          className="w-5 h-5 cursor-pointer accent-green-600"
+                        />
+                        <span className={`font-medium flex-1 ${isSelected ? 'text-green-800' : 'text-gray-700'}`}>{ing.name}</span>
+                        {isSelected && (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min="1"
+                              disabled={loading}
+                              className="border border-gray-300 p-2 rounded-lg w-20 focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none"
+                              value={ingQty}
+                              onChange={(e) => {
+                                const qty = parseInt(e.target.value) || 1;
+                                setNewItem({
+                                  ...newItem,
+                                  ingredients: newItem.ingredients.map(i => i.id === ing.id ? {...i, quantity: qty} : i)
+                                });
+                              }}
+                            />
+                            <span className="text-sm text-gray-500 w-12">unit</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className="text-sm text-gray-500 text-center py-8">No ingredients available</p>
+                )}
 
                 {loadingIngredients && (
                   <div className="w-full text-center py-3 text-sm text-gray-600">Loading branch inventory...</div>
@@ -606,7 +580,7 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
                 <button onClick={() => setModalStep(1)} disabled={loading} className="flex-1 bg-gray-100 hover:bg-gray-200 py-3 rounded-2xl font-medium flex items-center justify-center gap-2 disabled:opacity-50">
                   <ChevronLeft size={18} /> Back
                 </button>
-                <button onClick={handleAdd} disabled={loading} className="flex-1 bg-green-600 hover:bg-green-700 py-3 rounded-2xl text-white font-medium flex items-center justify-center gap-2 disabled:opacity-70">
+                <button onClick={handleAdd} disabled={loading || newItem.ingredients.length === 0} className="flex-1 bg-green-600 hover:bg-green-700 py-3 rounded-2xl text-white font-medium flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed" title={newItem.ingredients.length === 0 ? "Select at least one inventory item" : ""}>
                   {loading ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
