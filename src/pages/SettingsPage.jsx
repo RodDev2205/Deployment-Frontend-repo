@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import API_BASE_URL from '../config/api';
 import { useAlert } from '../context/AlertContext';
+import { Plus, Edit2, Percent, X } from 'lucide-react';
 
 export default function SimpleSettings() {
   const { success, error } = useAlert();
@@ -13,6 +14,33 @@ export default function SimpleSettings() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [activeTab, setActiveTab] = useState('account');
+  
+  // Category Management state
+  const [categories, setCategories] = useState([]);
+  const [categoryLoading, setCategoryLoading] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [categoryForm, setCategoryForm] = useState({
+    name: '',
+    type: 'menu', // 'menu', 'inventory', 'void_reason'
+    description: ''
+  });
+
+  // Tax Management state
+  const [taxRate, setTaxRate] = useState('12%');
+  const [showTaxEditModal, setShowTaxEditModal] = useState(false);
+  const [taxFormData, setTaxFormData] = useState('12%');
+
+  // Discount Management state
+  const [discounts, setDiscounts] = useState([]);
+  const [discountLoading, setDiscountLoading] = useState(false);
+  const [showDiscountModal, setShowDiscountModal] = useState(false);
+  const [editingDiscount, setEditingDiscount] = useState(null);
+  const [discountForm, setDiscountForm] = useState({
+    name: '',
+    rate: '',
+    description: ''
+  });
   
   // Account info state
   const [userData, setUserData] = useState({
@@ -85,6 +113,352 @@ export default function SimpleSettings() {
     }
   };
 
+  // Category Management Functions
+  const fetchCategories = async (token) => {
+    setCategoryLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/categories`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch categories');
+      }
+
+      const data = await response.json();
+      setCategories(data.categories || []);
+    } catch (err) {
+      console.error('Error fetching categories:', err);
+      error('Fetch Error', 'Failed to load categories');
+    } finally {
+      setCategoryLoading(false);
+    }
+  };
+
+  const handleOpenCategoryModal = (category = null) => {
+    if (category) {
+      setEditingCategory(category);
+      setCategoryForm({
+        name: category.name,
+        type: category.type,
+        description: category.description || ''
+      });
+    } else {
+      setEditingCategory(null);
+      setCategoryForm({
+        name: '',
+        type: 'menu',
+        description: ''
+      });
+    }
+    setShowCategoryModal(true);
+  };
+
+  const handleCloseCategoryModal = () => {
+    setShowCategoryModal(false);
+    setEditingCategory(null);
+    setCategoryForm({
+      name: '',
+      type: 'menu',
+      description: ''
+    });
+  };
+
+  const handleCategoryFormChange = (e) => {
+    const { name, value } = e.target;
+    setCategoryForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSaveCategory = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        error('Authentication Required', 'Please log in first');
+        return;
+      }
+
+      if (!categoryForm.name.trim()) {
+        error('Validation Error', 'Category name is required');
+        return;
+      }
+
+      const endpoint = editingCategory
+        ? `${API_BASE_URL}/api/categories/${editingCategory.id}`
+        : `${API_BASE_URL}/api/categories`;
+
+      const method = editingCategory ? 'PUT' : 'POST';
+
+      const response = await fetch(endpoint, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(categoryForm)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to ${editingCategory ? 'update' : 'add'} category`);
+      }
+
+      await fetchCategories(token);
+      handleCloseCategoryModal();
+      success(
+        editingCategory ? 'Category Updated' : 'Category Added',
+        `Category has been ${editingCategory ? 'updated' : 'added'} successfully.`
+      );
+    } catch (err) {
+      console.error('Error saving category:', err);
+      error('Save Error', err.message);
+    }
+  };
+
+  const handleDeleteCategory = async (categoryId) => {
+    if (!window.confirm('Are you sure you want to delete this category?')) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        error('Authentication Required', 'Please log in first');
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/categories/${categoryId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete category');
+      }
+
+      await fetchCategories(token);
+      success('Category Deleted', 'Category has been deleted successfully.');
+    } catch (err) {
+      console.error('Error deleting category:', err);
+      error('Delete Error', err.message);
+    }
+  };
+
+  // Tax Management Functions
+  const handleSaveTax = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        error('Authentication Required', 'Please log in first');
+        return;
+      }
+
+      if (!taxFormData.trim()) {
+        error('Validation Error', 'Tax rate is required');
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/tax-rates`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ rate: taxFormData })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update tax rate');
+      }
+
+      setTaxRate(taxFormData);
+      setShowTaxEditModal(false);
+      success('Tax Updated', 'Tax rate has been updated successfully.');
+    } catch (err) {
+      console.error('Error saving tax:', err);
+      error('Save Error', err.message);
+    }
+  };
+
+  // Discount Management Functions
+  const fetchDiscounts = async (token) => {
+    setDiscountLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/discounts`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch discounts');
+      }
+
+      const data = await response.json();
+      setDiscounts(data.discounts || []);
+    } catch (err) {
+      console.error('Error fetching discounts:', err);
+      error('Fetch Error', 'Failed to load discounts');
+    } finally {
+      setDiscountLoading(false);
+    }
+  };
+
+  const handleOpenDiscountModal = (discount = null) => {
+    if (discount) {
+      setEditingDiscount(discount);
+      setDiscountForm({
+        name: discount.name,
+        rate: discount.rate,
+        description: discount.description || ''
+      });
+    } else {
+      setEditingDiscount(null);
+      setDiscountForm({
+        name: '',
+        rate: '',
+        description: ''
+      });
+    }
+    setShowDiscountModal(true);
+  };
+
+  const handleCloseDiscountModal = () => {
+    setShowDiscountModal(false);
+    setEditingDiscount(null);
+    setDiscountForm({
+      name: '',
+      rate: '',
+      description: ''
+    });
+  };
+
+  const handleDiscountFormChange = (e) => {
+    const { name, value } = e.target;
+    setDiscountForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSaveDiscount = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        error('Authentication Required', 'Please log in first');
+        return;
+      }
+
+      if (!discountForm.name.trim()) {
+        error('Validation Error', 'Discount name is required');
+        return;
+      }
+
+      if (!discountForm.rate || discountForm.rate < 0 || discountForm.rate > 100) {
+        error('Validation Error', 'Discount rate must be between 0 and 100');
+        return;
+      }
+
+      const endpoint = editingDiscount
+        ? `${API_BASE_URL}/api/discounts/${editingDiscount.id}`
+        : `${API_BASE_URL}/api/discounts`;
+
+      const method = editingDiscount ? 'PUT' : 'POST';
+
+      const response = await fetch(endpoint, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(discountForm)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to ${editingDiscount ? 'update' : 'add'} discount`);
+      }
+
+      await fetchDiscounts(token);
+      handleCloseDiscountModal();
+      success(
+        editingDiscount ? 'Discount Updated' : 'Discount Added',
+        `Discount has been ${editingDiscount ? 'updated' : 'added'} successfully.`
+      );
+    } catch (err) {
+      console.error('Error saving discount:', err);
+      error('Save Error', err.message);
+    }
+  };
+
+  const handleDeleteDiscount = async (discountId) => {
+    if (!window.confirm('Are you sure you want to delete this discount?')) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        error('Authentication Required', 'Please log in first');
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/discounts/${discountId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete discount');
+      }
+
+      await fetchDiscounts(token);
+      success('Discount Deleted', 'Discount has been deleted successfully.');
+    } catch (err) {
+      console.error('Error deleting discount:', err);
+      error('Delete Error', err.message);
+    }
+  };
+
+  const handleToggleDiscountStatus = async (discountId, currentStatus) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        error('Authentication Required', 'Please log in first');
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/discounts/${discountId}/toggle-status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ is_active: !currentStatus })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update discount status');
+      }
+
+      await fetchDiscounts(token);
+      success(
+        'Discount Status Updated',
+        `Discount has been ${!currentStatus ? 'activated' : 'deactivated'} successfully.`
+      );
+    } catch (err) {
+      console.error('Error toggling discount status:', err);
+      error('Update Error', err.message);
+    }
+  };
+
   // Fetch current user profile and admin PIN on page load
   useEffect(() => {
     const fetchProfile = async () => {
@@ -130,6 +504,12 @@ export default function SimpleSettings() {
             const pinData = await pinRes.json();
             setPinCode(pinData.pin_code || 'N/A');
           }
+        }
+
+        // Fetch categories if admin or superadmin
+        if (payload.role_id === 2 || payload.role_id === 3) {
+          await fetchCategories(token);
+          await fetchDiscounts(token);
         }
       } catch (error) {
         console.error('Error fetching profile:', error);
@@ -240,6 +620,16 @@ export default function SimpleSettings() {
                 }`}
               >
                 Account Information
+              </button>
+              <button
+                onClick={() => setActiveTab('category')}
+                className={`flex-1 py-4 px-6 font-semibold text-center transition-all ${
+                  activeTab === 'category'
+                    ? 'text-emerald-700 border-b-2 border-emerald-700'
+                    : 'text-gray-600 border-b-2 border-transparent hover:text-gray-900'
+                }`}
+              >
+                Category Management
               </button>
               <button
                 onClick={() => setActiveTab('tax')}
@@ -369,45 +759,194 @@ export default function SimpleSettings() {
             </div>
           )}
 
+          {/* Category Management Tab */}
+          {activeTab === 'category' && (
+            <div className="bg-white rounded-lg p-6 shadow-sm">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h2 className="text-base font-bold mb-1">Category Management</h2>
+                  <p className="text-xs text-gray-600">Manage menu, inventory, and void transaction categories</p>
+                </div>
+                <button
+                  onClick={() => handleOpenCategoryModal()}
+                  className="py-2 px-4 bg-emerald-700 text-white text-sm rounded font-semibold hover:bg-emerald-800"
+                >
+                  + Add Category
+                </button>
+              </div>
+
+              {categoryLoading ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">Loading categories...</p>
+                </div>
+              ) : categories.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">No categories found. Add a new category to get started.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-100 border-b border-gray-300">
+                      <tr>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700">Category Name</th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700">Type</th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700">Description</th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {categories.map((category, index) => (
+                        <tr key={category.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                          <td className="px-4 py-3 text-gray-800">{category.name}</td>
+                          <td className="px-4 py-3">
+                            <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium">
+                              {category.type === 'menu' ? 'Menu' : category.type === 'inventory' ? 'Inventory' : 'Void Reason'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-gray-600 text-xs">{category.description || '-'}</td>
+                          <td className="px-4 py-3 space-x-2 flex">
+                            <button
+                              onClick={() => handleOpenCategoryModal(category)}
+                              className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteCategory(category.id)}
+                              className="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600"
+                            >
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Tax Tab */}
           {activeTab === 'tax' && (
             <div className="bg-white rounded-lg p-6 shadow-sm">
-              <h2 className="text-base font-bold mb-1">Tax Settings</h2>
-              <p className="text-xs text-gray-600 mb-6">View and manage tax rates</p>
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h2 className="text-base font-bold mb-1">Tax Settings</h2>
+                  <p className="text-xs text-gray-600">
+                    {roleId === 3 ? 'View and manage tax rates' : 'View tax rates (Read-only)'}
+                  </p>
+                </div>
+                {roleId === 3 && (
+                  <button
+                    onClick={() => setShowTaxEditModal(true)}
+                    className="py-2 px-4 bg-emerald-700 text-white text-sm rounded font-semibold hover:bg-emerald-800"
+                  >
+                    Edit Tax
+                  </button>
+                )}
+              </div>
               
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Tax Rate (%):</label>
                   <input
                     type="text"
-                    value="12%"
+                    value={taxRate}
                     readOnly
                     className="w-full border border-gray-300 rounded p-3 text-sm outline-none bg-gray-50 text-gray-700"
                   />
-                  <p className="text-xs text-gray-500 mt-2">Read-only for now</p>
+                  <p className="text-xs text-gray-500 mt-2">
+                    {roleId === 3 ? 'Click "Edit Tax" to modify' : 'Read-only for ADMIN users'}
+                  </p>
                 </div>
               </div>
             </div>
           )}
 
           {/* Discount Tab */}
-          {activeTab === 'discount' && (
+          {activeTab === 'discount' && (roleId === 2 || roleId === 3) && (
             <div className="bg-white rounded-lg p-6 shadow-sm">
-              <h2 className="text-base font-bold mb-1">Discount Settings</h2>
-              <p className="text-xs text-gray-600 mb-6">View and manage discount configurations</p>
-              
-              <div className="space-y-4">
+              <div className="flex justify-between items-center mb-6">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Default Discount (%):</label>
-                  <input
-                    type="text"
-                    value="5%"
-                    readOnly
-                    className="w-full border border-gray-300 rounded p-3 text-sm outline-none bg-gray-50 text-gray-700"
-                  />
-                  <p className="text-xs text-gray-500 mt-2">Read-only for now</p>
+                  <h2 className="text-base font-bold mb-1">Discount Management</h2>
+                  <p className="text-xs text-gray-600">Add and manage discount types (PWD, Senior Citizen, Anniversary, etc.)</p>
                 </div>
+                <button
+                  onClick={() => handleOpenDiscountModal()}
+                  className="py-2 px-4 bg-emerald-700 text-white text-sm rounded font-semibold hover:bg-emerald-800"
+                >
+                  + Add Discount
+                </button>
               </div>
+
+              {discountLoading ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">Loading discounts...</p>
+                </div>
+              ) : discounts.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">No discounts found. Add a new discount type to get started.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-100 border-b border-gray-300">
+                      <tr>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700">Discount Name</th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700">Rate (%)</th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700">Status</th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700">Description</th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {discounts.map((discount, index) => (
+                        <tr key={discount.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                          <td className="px-4 py-3 text-gray-800 font-medium">{discount.name}</td>
+                          <td className="px-4 py-3 text-gray-800">{discount.rate}%</td>
+                          <td className="px-4 py-3">
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                              discount.is_active 
+                                ? 'bg-green-100 text-green-700' 
+                                : 'bg-gray-100 text-gray-700'
+                            }`}>
+                              {discount.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-gray-600 text-xs">{discount.description || '-'}</td>
+                          <td className="px-4 py-3 space-x-2 flex flex-wrap gap-2">
+                            <button
+                              onClick={() => handleOpenDiscountModal(discount)}
+                              className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
+                            >
+                              Edit
+                            </button>
+                            {roleId === 3 && (
+                              <button
+                                onClick={() => handleToggleDiscountStatus(discount.id, discount.is_active)}
+                                className={`px-3 py-1 text-white text-xs rounded ${
+                                  discount.is_active
+                                    ? 'bg-orange-500 hover:bg-orange-600'
+                                    : 'bg-green-500 hover:bg-green-600'
+                                }`}
+                              >
+                                {discount.is_active ? 'Deactivate' : 'Activate'}
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleDeleteDiscount(discount.id)}
+                              className="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600"
+                            >
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 
@@ -481,7 +1020,7 @@ export default function SimpleSettings() {
 
           {/* Edit Account Modal */}
           {showEditModal && (
-            <div className="fixed top-0 left-0 w-screen h-screen z-[9999] bg-black/50 flex items-center justify-center">
+            <div className="fixed top-0 left-0 w-screen h-screen z-50 bg-black/50 flex items-center justify-center">
               <div className="bg-white rounded-lg p-4 w-full max-w-md mx-8">
                 <h2 className="text-lg font-bold mb-3 text-gray-800">Edit Account Information</h2>
                 
@@ -632,6 +1171,203 @@ export default function SimpleSettings() {
               </div>
             </div>
           )}
+
+          {/* Category Management Modal */}
+          {showCategoryModal && (
+            <div className="fixed top-0 left-0 w-screen h-screen z-50 bg-black/50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
+                {/* Header */}
+                <div className="flex items-center justify-between px-6 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="text-emerald-700">
+                      {editingCategory ? <Edit2 size={20} /> : <Plus size={20} />}
+                    </div>
+                    <h2 className="text-lg font-semibold text-gray-800">
+                      {editingCategory ? 'Edit Category' : 'Add Category'}
+                    </h2>
+                  </div>
+                  <button
+                    onClick={handleCloseCategoryModal}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+
+                {/* Form Content */}
+                <form onSubmit={handleSaveCategory} className="px-6 py-4 space-y-4">
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">Category Name</label>
+                    <input
+                      type="text"
+                      name="name"
+                      value={categoryForm.name}
+                      onChange={handleCategoryFormChange}
+                      placeholder="Enter category name"
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">Category Type</label>
+                    <select
+                      name="type"
+                      value={categoryForm.type}
+                      onChange={handleCategoryFormChange}
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-white"
+                      required
+                    >
+                      <option value="menu">Menu</option>
+                      <option value="inventory">Inventory</option>
+                      <option value="void_reason">Void Transaction Reason</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">Description (Optional)</label>
+                    <textarea
+                      name="description"
+                      value={categoryForm.description}
+                      onChange={handleCategoryFormChange}
+                      placeholder="Enter description"
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 resize-none h-20"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full py-2 bg-emerald-700 text-white text-sm font-semibold rounded hover:bg-emerald-800"
+                  >
+                    {editingCategory ? 'Update' : 'Add'} Category
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Tax Management Modal */}
+          {showTaxEditModal && (
+            <div className="fixed top-0 left-0 w-screen h-screen z-50 bg-black/50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
+                {/* Header */}
+                <div className="flex items-center justify-between px-6 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="text-emerald-700">
+                      <Percent size={20} />
+                    </div>
+                    <h2 className="text-lg font-semibold text-gray-800">Edit Tax Rate</h2>
+                  </div>
+                  <button
+                    onClick={() => setShowTaxEditModal(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+
+                {/* Form Content */}
+                <form onSubmit={handleSaveTax} className="px-6 py-4 space-y-4">
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">Tax Rate (%)</label>
+                    <input
+                      type="number"
+                      value={taxFormData}
+                      onChange={(e) => setTaxFormData(e.target.value)}
+                      placeholder="0.00"
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                      step="0.01"
+                      min="0"
+                      max="100"
+                      required
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full py-2 bg-emerald-700 text-white text-sm font-semibold rounded hover:bg-emerald-800"
+                  >
+                    Update Tax
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Discount Modal */}
+          {showDiscountModal && (
+            <div className="fixed top-0 left-0 w-screen h-screen z-50 bg-black/50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
+                {/* Header */}
+                <div className="flex items-center justify-between px-6 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="text-emerald-700">
+                      {editingDiscount ? <Edit2 size={20} /> : <Plus size={20} />}
+                    </div>
+                    <h2 className="text-lg font-semibold text-gray-800">
+                      {editingDiscount ? 'Edit Discount' : 'Add Discount'}
+                    </h2>
+                  </div>
+                  <button
+                    onClick={handleCloseDiscountModal}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+
+                {/* Form Content */}
+                <form onSubmit={handleSaveDiscount} className="px-6 py-4 space-y-4">
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">Discount Name</label>
+                    <input
+                      type="text"
+                      name="name"
+                      value={discountForm.name}
+                      onChange={handleDiscountFormChange}
+                      placeholder="e.g., PWD, Senior Citizen"
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">Discount Rate (%)</label>
+                    <input
+                      type="number"
+                      name="rate"
+                      value={discountForm.rate}
+                      onChange={handleDiscountFormChange}
+                      placeholder="0.00"
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                      step="0.01"
+                      min="0"
+                      max="100"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">Description (Optional)</label>
+                    <textarea
+                      name="description"
+                      value={discountForm.description}
+                      onChange={handleDiscountFormChange}
+                      placeholder="Enter description"
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 resize-none h-20"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full py-2 bg-emerald-700 text-white text-sm font-semibold rounded hover:bg-emerald-800"
+                  >
+                    {editingDiscount ? 'Update' : 'Add'} Discount
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
         </>
       )}
 
@@ -715,7 +1451,7 @@ export default function SimpleSettings() {
 
           {/* Edit Account Modal */}
           {showEditModal && (
-            <div className="fixed top-0 left-0 w-screen h-screen z-[9999] bg-black/50 flex items-center justify-center">
+            <div className="fixed top-0 left-0 w-screen h-screen z-50 bg-black/50 flex items-center justify-center">
               <div className="bg-white rounded-lg p-4 w-full max-w-md mx-8">
                 <h2 className="text-lg font-bold mb-3 text-gray-800">Edit Account Information</h2>
                 
