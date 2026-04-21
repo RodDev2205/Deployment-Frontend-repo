@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useAlert } from "@/context/AlertContext";
 import API_BASE_URL from '../../../config/api';
 
-export default function MenuListTab() {
+export default function MenuListTab({ refreshKey }) {
   const [products, setProducts] = useState([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -25,7 +25,7 @@ export default function MenuListTab() {
   // 🔹 Fetch from backend
   useEffect(() => {
     fetchProducts();
-  }, []);
+  }, [refreshKey]);
 
   const fetchProducts = async () => {
     try {
@@ -145,7 +145,14 @@ export default function MenuListTab() {
 
       if (!res.ok) throw new Error("Failed to fetch ingredients");
       const data = await res.json();
-      setLinkedIngredients(data || []);
+      const normalized = (data || []).map((item) => ({
+        id: item.ingredient_id ?? item.inventory_id ?? item.id,
+        item_name: item.item_name || item.name || "Unknown Ingredient",
+        servings_required: item.servings_required ?? item.quantity ?? 0,
+        quantity_per_unit: item.quantity_per_unit,
+        servings_per_unit: item.servings_per_unit,
+      }));
+      setLinkedIngredients(normalized);
     } catch (err) {
       console.error("Failed to fetch linked ingredients:", err);
       setLinkedIngredients([]);
@@ -370,11 +377,25 @@ export default function MenuListTab() {
                   {loadingIngredients ? (
                     <p className="text-sm text-gray-500">Loading ingredients...</p>
                   ) : linkedIngredients.length > 0 ? (
-                    <div className="space-y-2 max-h-40 overflow-y-auto">
-                      {linkedIngredients.map((ing, idx) => (
-                        <div key={idx} className="bg-gray-100 p-2 rounded text-sm">
-                          <p className="font-medium text-gray-800">{ing.item_name}</p>
-                          <p className="text-gray-600">Servings Required: {ing.servings_required}</p>
+                    <div className="space-y-3 max-h-52 overflow-y-auto pr-1">
+                      {linkedIngredients.map((ing) => (
+                        <div key={ing.id || ing.item_name} className="bg-gray-100 p-3 rounded-lg text-sm">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="font-semibold text-gray-800">{ing.item_name}</p>
+                              {(ing.quantity_per_unit || ing.servings_per_unit) && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                  {ing.quantity_per_unit != null && `Qty / unit: ${ing.quantity_per_unit}`}
+                                  {ing.quantity_per_unit != null && ing.servings_per_unit != null ? " · " : ""}
+                                  {ing.servings_per_unit != null && `Servings / unit: ${ing.servings_per_unit}`}
+                                </p>
+                              )}
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xs text-gray-500">Required</p>
+                              <p className="font-semibold text-gray-800">{ing.servings_required}</p>
+                            </div>
+                          </div>
                         </div>
                       ))}
                     </div>

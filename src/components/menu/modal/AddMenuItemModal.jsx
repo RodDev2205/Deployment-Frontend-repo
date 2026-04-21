@@ -2,9 +2,11 @@ import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertCircle, CheckCircle, ChevronRight, ChevronLeft } from "lucide-react";
 import API_BASE_URL from '../../../config/api';
+import { useAlert } from '../../../context/AlertContext';
 
 export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categories = [] }) {
   // Note: don't return before hooks — hooks must run consistently
+  const { success: showSuccess, error: showError } = useAlert();
 
   const [modalStep, setModalStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -20,12 +22,10 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
   });
   const [filePreview, setFilePreview] = useState(null);
 
-  // Ingredients from API with pagination (infinite scroll)
+  // Ingredients from API
   const [fetchedIngredients, setFetchedIngredients] = useState([]);
-  const [page, setPage] = useState(1);
-  const [limit] = useState(10);
-  const [hasMore, setHasMore] = useState(true);
   const [loadingIngredients, setLoadingIngredients] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   // Categories from API (always fetch for fresh database data)
   const [localCategories, setLocalCategories] = useState([]);
@@ -34,8 +34,18 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
   const fetchCategories = async () => {
     try {
       const token = localStorage.getItem("token");
+      if (!token) {
+        console.warn("No token found for categories fetch");
+        return;
+      }
       const res = await fetch(API_CATEGORIES, { headers: { Authorization: `Bearer ${token}` } });
-      if (!res.ok) throw new Error("Failed to load categories");
+      if (!res.ok) {
+        if (res.status === 401) {
+          localStorage.removeItem("token");
+          console.warn("Session expired during categories fetch");
+        }
+        throw new Error("Failed to load categories");
+      }
       const data = await res.json();
       setLocalCategories(data || []);
     } catch (err) {
@@ -43,6 +53,15 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
       // silently fall back to prop categories if API fails
     }
   };
+
+  const roleId = Number(localStorage.getItem("role_id"));
+  const isSuperadmin = roleId === 3;
+  const totalSteps = isSuperadmin ? 1 : 2;
+
+  // Filter ingredients based on search term
+  const filteredIngredients = fetchedIngredients.filter((ing) =>
+    ing.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const productNameRef = useRef(null);
 
@@ -66,17 +85,15 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [modalStep, loading, newItem]);
 
-  // when entering step 2 (link ingredients) fetch first page
+  // when entering step 2 (link ingredients) fetch ingredients
   useEffect(() => {
-    if (isOpen && modalStep === 2) {
+    if (!isSuperadmin && isOpen && modalStep === 2) {
       // reset and fetch
       setFetchedIngredients([]);
-      setPage(1);
-      setHasMore(true);
-      fetchIngredients(1);
+      fetchIngredients();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, modalStep]);
+  }, [isOpen, modalStep, isSuperadmin]);
 
   // fetch categories from API when modal opens (always get fresh data from DB)
   useEffect(() => {
@@ -87,19 +104,10 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
   }, [isOpen]);
 
   // display fetched ingredients (always from API)
-  const displayIngredients = fetchedIngredients;
+  const displayIngredients = filteredIngredients;
 
   // display API categories (or fallback to prop if API fetch failed)
   const displayCategories = localCategories.length > 0 ? localCategories : categories || [];
-
-  const handleIngredientsScroll = (e) => {
-    const el = e.target;
-    if (!hasMore || loadingIngredients) return;
-    // near bottom
-    if (el.scrollHeight - el.scrollTop <= el.clientHeight + 40) {
-      fetchIngredients(page + 1);
-    }
-  };
 
   // File preview URL - SINGLE useEffect
   useEffect(() => {
@@ -120,18 +128,34 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
     setModalStep(1);
     setError("");
     setSuccess(false);
-    // reset ingredient pagination
+    // reset ingredient list
     setFetchedIngredients([]);
-    setPage(1);
-    setHasMore(true);
     onClose();
   };
 
-  const handleNextStep = () => {
+  const validateBasicInfo = () => {
+    if (!newItem.product_name.trim()) {
+      setError("Product name is required");
+      return false;
+    }
+    if (!newItem.category_id) {
+      setError("Please select a category");
+      return false;
+    }
+    if (!newItem.price || parseFloat(newItem.price) <= 0) {
+      setError("Price must be a positive number");
+      return false;
+    }
+    return true;
+  };
+
+  const handleNextStep = async () => {
     setError("");
-    if (!newItem.product_name.trim()) return setError("Product name is required");
-    if (!newItem.category_id) return setError("Please select a category");
-    if (!newItem.price || parseFloat(newItem.price) <= 0) return setError("Price must be a positive number");
+    if (!validateBasicInfo()) return;
+    if (isSuperadmin) {
+      await handleAdd();
+      return;
+    }
     setModalStep(2);
   };
 
@@ -141,8 +165,11 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
     setLoadingIngredients(true);
     try {
       const token = localStorage.getItem("token");
-      const API_INVENTORY = `${API_BASE_URL}/api/inventory`;
-      const res = await fetch(`${API_INVENTORY}/get-ingredients?page=${pageToLoad}&limit=${limit}`, {
+      if (!token) {
+        throw new Error("You are not logged in. Please log in again.");
+      }
+      const API_BRANCH_INGREDIENTS = `${API_BASE_URL}/api/branch-inventory`;
+      const res = await fetch(API_BRANCH_INGREDIENTS, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -161,32 +188,22 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
 
       if (!res.ok) {
         const msg = (data && data.message) || (data && data.error) || res.statusText || 'Failed to load ingredients';
+        if (res.status === 401) {
+          localStorage.removeItem("token");
+          throw new Error("Your session has expired. Please log in again.");
+        }
         throw new Error(msg);
       }
 
-      // backend returns paginated shape { data, total, currentPage, totalPages } or an array
-      let items = [];
-      let more = false;
+      const normalized = data.map((i) => ({
+        id: i.inventory_id ?? i.ingredient_id ?? i.id,
+        name: i.item_name ?? i.name,
+        stock_units: i.stock_units ?? 0,
+        total_servings: i.total_servings ?? 0,
+        status: i.status ?? "unknown",
+      }));
 
-      if (Array.isArray(data)) {
-        items = data;
-        more = false;
-      } else if (data && data.data) {
-        items = data.data;
-        more = data.currentPage < data.totalPages;
-      }
-
-      // normalize to { id, name }
-      const normalized = items.map((i) => ({ id: i.inventory_id ?? i.id ?? i.item_id ?? i.itemId ?? i.id, name: i.item_name ?? i.name ?? i.itemName ?? '' }));
-
-      if (pageToLoad === 1) {
-        setFetchedIngredients(normalized);
-      } else {
-        setFetchedIngredients((prev) => [...prev, ...normalized]);
-      }
-
-      setHasMore(more);
-      setPage(pageToLoad);
+      setFetchedIngredients(normalized);
     } catch (err) {
       console.error(err);
       setError(err.message || "Failed to load ingredients");
@@ -201,6 +218,9 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
 
     try {
       const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("You are not logged in. Please log in again.");
+      }
       const API_MENU = `${API_BASE_URL}/api/menu`;
 
       // Build FormData for multipart/form-data (file + JSON fields)
@@ -232,12 +252,18 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
       }
 
       if (!res.ok) {
-        const msg = (data && data.message) || (data && data.error) || "Failed to create product";
+        const msg = (data && data.message) || (data && data.error) || res.statusText || "Failed to create product";
+        if (res.status === 401) {
+          // Clear invalid token and suggest login
+          localStorage.removeItem("token");
+          throw new Error("Your session has expired. Please log in again.");
+        }
         throw new Error(msg);
       }
 
       // Success: call parent callback and close modal
       onAddItem(newItem);
+      showSuccess("Menu Item Added", `${newItem.product_name} has been created successfully.`);
       setSuccess(true);
       setTimeout(() => {
         setSuccess(false);
@@ -245,7 +271,9 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
       }, 1000);
     } catch (err) {
       console.error(err);
-      setError(err.message || "Failed to add product");
+      const errorMsg = err.message || "Failed to add product";
+      setError(errorMsg);
+      showError("Failed to Add Menu Item", errorMsg);
     } finally {
       setLoading(false);
     }
@@ -274,13 +302,13 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
               {modalStep === 1 ? "Basic Information" : "Link Ingredients"}
             </h2>
             <span className="text-sm font-medium text-gray-500">
-              Step {modalStep} of 2
+              Step {modalStep} of {totalSteps}
             </span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div
               className="bg-green-600 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${(modalStep / 2) * 100}%` }}
+              style={{ width: `${(modalStep / totalSteps) * 100}%` }}
             />
           </div>
         </div>
@@ -437,7 +465,15 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
                     </>
                   ) : (
                     <>
-                      Next <ChevronRight size={18} />
+                      {isSuperadmin ? (
+                        <>
+                          <CheckCircle size={18} /> Add Product
+                        </>
+                      ) : (
+                        <>
+                          Next <ChevronRight size={18} />
+                        </>
+                      )}
                     </>
                   )}
                 </button>
@@ -459,52 +495,102 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
                 Select ingredients for <span className="font-semibold text-gray-800">{newItem.product_name}</span>
               </p>
 
-              <div onScroll={handleIngredientsScroll} className="max-h-72 overflow-y-auto space-y-3 border border-gray-200 rounded-2xl p-4 bg-gray-50">
-                {displayIngredients.length > 0 ? (
-                  displayIngredients.map((ing) => {
-                    const ingQty = newItem.ingredients.find((i) => i.id === ing.id)?.quantity || "";
-                    return (
-                      <div key={ing.id} className="flex items-center gap-4 p-3 bg-white rounded-xl border border-gray-100 hover:border-green-300 transition">
-                        <span className="font-medium text-gray-700 flex-1">{ing.name}</span>
-                        <input
-                          type="number"
-                          placeholder="Qty"
-                          disabled={loading}
-                          className="border border-gray-200 p-2 rounded-lg w-20 focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none"
-                          value={ingQty}
-                          onChange={(e) => {
-                            const qty = parseInt(e.target.value) || 0;
-                            if (qty === 0) {
-                              setNewItem({
-                                ...newItem,
-                                ingredients: newItem.ingredients.filter(i => i.id !== ing.id)
-                              });
-                            } else {
-                              const exists = newItem.ingredients.find(i => i.id === ing.id);
-                              if (exists) {
-                                setNewItem({
-                                  ...newItem,
-                                  ingredients: newItem.ingredients.map(i => i.id === ing.id ? {...i, quantity: qty} : i)
-                                });
-                              } else {
-                                setNewItem({
-                                  ...newItem,
-                                  ingredients: [...newItem.ingredients, { id: ing.id, quantity: qty }]
-                                });
-                              }
-                            }
-                          }}
-                        />
-                        <span className="text-sm text-gray-500 w-12">unit</span>
-                      </div>
-                    )
-                  })
-                ) : (
-                  <p className="text-sm text-gray-500 text-center py-8">No ingredients available</p>
-                )}
+              <div className="max-h-72 overflow-y-auto rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                <div className="mb-4">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Available Inventory Items</h4>
+                  <div className="mb-3">
+                    <input
+                      type="text"
+                      placeholder="Search ingredients..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    {displayIngredients.length > 0 ? (
+                      displayIngredients.map((ing) => {
+                        const selectedItem = newItem.ingredients.find((i) => i.id === ing.id);
+                        return (
+                          <div key={ing.id} className="p-3 bg-white rounded-lg border border-gray-200 hover:border-green-300 transition">
+                            <div className="flex items-center gap-3">
+                              <label className="flex items-center">
+                                <input
+                                  type="checkbox"
+                                  checked={!!selectedItem}
+                                  onChange={() => {
+                                    if (selectedItem) {
+                                      setNewItem((prev) => ({
+                                        ...prev,
+                                        ingredients: prev.ingredients.filter((i) => i.id !== ing.id),
+                                      }));
+                                    } else {
+                                      setNewItem((prev) => ({
+                                        ...prev,
+                                        ingredients: [...prev.ingredients, { id: ing.id, quantity: 1 }],
+                                      }));
+                                    }
+                                  }}
+                                  className="h-4 w-4 text-green-600 border-gray-300 rounded"
+                                />
+                              </label>
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-medium text-gray-700">{ing.name}</span>
+                                  <span className={`text-xs px-2 py-1 rounded ${
+                                    ing.status === 'available' ? 'bg-green-100 text-green-700' :
+                                    ing.status === 'low_stock' ? 'bg-yellow-100 text-yellow-700' :
+                                    'bg-red-100 text-red-700'
+                                  }`}>
+                                    {ing.status}
+                                  </span>
+                                </div>
+                                <div className="text-xs text-gray-500 mt-1">
+                                  Servings: {ing.total_servings ?? 0}
+                                </div>
+                                {selectedItem && (
+                                  <div className="mt-2 flex items-center gap-2">
+                                    <label className="text-sm text-gray-700">Servings:</label>
+                                    <input
+                                      type="number"
+                                      min="0.01"
+                                      step="0.01"
+                                      value={selectedItem.quantity}
+                                      onChange={(e) => {
+                                        const qty = parseFloat(e.target.value) || 0;
+                                        if (qty <= 0) {
+                                          setNewItem((prev) => ({
+                                            ...prev,
+                                            ingredients: prev.ingredients.filter((i) => i.id !== ing.id),
+                                          }));
+                                        } else {
+                                          setNewItem((prev) => ({
+                                            ...prev,
+                                            ingredients: prev.ingredients.map((i) =>
+                                              i.id === ing.id ? { ...i, quantity: qty } : i
+                                            ),
+                                          }));
+                                        }
+                                      }}
+                                      className="w-20 border border-gray-200 rounded-lg p-2 text-sm"
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <p className="text-center text-sm text-gray-500 py-4">
+                        {fetchedIngredients.length === 0 ? "No inventory items available for your branch." : "No ingredients match your search."}
+                      </p>
+                    )}
+                  </div>
+                </div>
 
                 {loadingIngredients && (
-                  <div className="w-full text-center py-3 text-sm text-gray-600">Loading...</div>
+                  <div className="w-full text-center py-3 text-sm text-gray-600">Loading branch inventory...</div>
                 )}
               </div>
 

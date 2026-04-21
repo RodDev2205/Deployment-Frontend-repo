@@ -1,86 +1,213 @@
-import React, { useState, useEffect } from "react";
-import { Plus, AlertTriangle } from "lucide-react";
+import React, { useState, useEffect, useMemo } from "react";
+import { Plus, Search, Edit2 } from "lucide-react";
 import API_BASE_URL from '../../../config/api';
+import AddIngredientModal from "../../inventory/models/AddIngredientModal";
+import EditIngredientModal from "../../inventory/models/EditIngredientModal";
 
 export default function InventoryTab() {
   const [inventory, setInventory] = useState([]);
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("all");
-  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedIngredient, setSelectedIngredient] = useState(null);
+  const [sortConfig, setSortConfig] = useState({ key: 'item_name', direction: 'asc' });
+  const [branches, setBranches] = useState([]);
+  const [selectedBranchId, setSelectedBranchId] = useState('all');
+  const [errorMessage, setErrorMessage] = useState("");
+  const [mainCategories, setMainCategories] = useState([]);
+  const [subCategories, setSubCategories] = useState([]);
 
-  const ITEMS_PER_PAGE = 5;
+  const roleId = Number(localStorage.getItem('role_id'));
+  const isSuperadmin = roleId === 3;
 
-  // ✅ Fetch ingredients from backend (all branches for SuperAdmin, or branch-based for Admin)
   const fetchInventory = async () => {
     try {
+      setLoading(true);
       const token = localStorage.getItem("token");
+      if (!token) throw new Error("Authentication required");
 
-      // Try to get all inventory first (superadmin)
-      try {
-        const allResponse = await fetch(`${API_BASE_URL}/api/inventory/all-inventory`, {
-            headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (allResponse.ok) {
-          const data = await allResponse.json();
-          setInventory(data);
-          setLoading(false);
-          return;
-        }
-      } catch (err) {
-        // Not superadmin or endpoint error, fall through to branch-specific
-      }
-
-      // Fall back to branch-specific inventory
-      const response = await fetch(`${API_BASE_URL}/api/inventory/get-ingredients`, {
-          headers: { Authorization: `Bearer ${token}` },
+      const endpoint = isSuperadmin ? '/api/inventory/all-inventory' : '/api/inventory/get-ingredients';
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.message || "Failed to fetch inventory");
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.message || "Failed to fetch inventory");
       }
 
-      setInventory(data);
-      setLoading(false);
-    } catch (error) {
-      console.error("Fetch error:", error);
+      const data = await response.json();
+      const items = Array.isArray(data) ? data : data.data || [];
+      setInventory(items);
+      setErrorMessage("");
+    } catch (err) {
+      console.error("Inventory fetch error:", err);
+      setErrorMessage(String(err) || "Unable to load inventory");
+    } finally {
       setLoading(false);
     }
   };
 
-  // 🔄 Load on mount
+  const fetchBranches = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      const response = await fetch(`${API_BASE_URL}/api/branches/getAll`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) {
+        return;
+      }
+
+      const data = await response.json();
+      setBranches(Array.isArray(data) ? data : data.data || []);
+    } catch (err) {
+      console.error("Fetch branches error:", err);
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      // Fetch main categories
+      const mainRes = await fetch(`${API_BASE_URL}/api/inventory/main-categories`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (mainRes.ok) {
+        const mainData = await mainRes.json();
+        setMainCategories(Array.isArray(mainData) ? mainData : mainData.data || []);
+      }
+
+      // Fetch sub categories
+      const subRes = await fetch(`${API_BASE_URL}/api/inventory/sub-categories`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (subRes.ok) {
+        const subData = await subRes.json();
+        setSubCategories(Array.isArray(subData) ? subData : subData.data || []);
+      }
+    } catch (err) {
+      console.error("Fetch categories error:", err);
+    }
+  };
+
   useEffect(() => {
     fetchInventory();
-  }, []);
-
-  const filtered = inventory.filter((item) => {
-    const matchesSearch = item.item_name
-      .toLowerCase()
-      .includes(search.toLowerCase());
-
-    let matchesFilter = filter === "all";
-    if (filter === "lowstock") {
-      matchesFilter = item.total_servings <= item.low_stock_threshold;
-    } else if (filter === "instock") {
-      matchesFilter = item.total_servings > item.low_stock_threshold;
-    } else if (filter === "outofstock") {
-      matchesFilter = item.total_servings === 0;
+    fetchCategories();
+    if (isSuperadmin) {
+      fetchBranches();
     }
+  }, [isSuperadmin]);
 
-    return matchesSearch && matchesFilter;
-  });
+  const handleAddIngredient = async (newIngredient) => {
+    setShowAddModal(false);
+    setSelectedIngredient(null);
 
-  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
-  const start = (page - 1) * ITEMS_PER_PAGE;
-  const currentItems = filtered.slice(start, start + ITEMS_PER_PAGE);
+    if (newIngredient && newIngredient.inventory_id) {
+      const branchName = branches.find((b) => String(b.branch_id) === String(newIngredient.branch_id))?.branch_name;
+      setInventory((prev) => [
+        { ...newIngredient, branch_name: branchName || newIngredient.branch_name },
+        ...prev,
+      ]);
+    } else {
+      await fetchInventory();
+    }
+  };
 
-  const handleClear = () => {
-    setSearch("");
-    setFilter("all");
-    setPage(1);
+  const handleEditIngredient = (updatedIngredient) => {
+    setInventory((prev) =>
+      prev.map((item) => {
+        if (item.inventory_id === updatedIngredient.inventory_id) {
+          // If branch changed, update the branch_name
+          const newBranchName = branches.find((b) => String(b.branch_id) === String(updatedIngredient.branch_id))?.branch_name;
+          return {
+            ...updatedIngredient,
+            branch_name: newBranchName || updatedIngredient.branch_name,
+          };
+        }
+        return item;
+      })
+    );
+    setShowEditModal(false);
+    setSelectedIngredient(null);
+  };
+
+  // Helper functions to get category names by ID
+  const getMainCategoryName = (mainCategoryId) => {
+    const category = mainCategories.find((cat) => cat.main_category_id === mainCategoryId);
+    return category ? category.name : "-";
+  };
+
+  const getSubCategoryName = (subCategoryId) => {
+    const category = subCategories.find((cat) => cat.sub_category_id === subCategoryId);
+    return category ? category.name : "-";
+  };
+
+  const filteredInventory = useMemo(() => {
+    const lowerSearch = search.toLowerCase().trim();
+    return inventory.filter((item) => {
+      const matchesSearch =
+        item.item_name?.toLowerCase().includes(lowerSearch) ||
+        String(item.inventory_id).includes(lowerSearch) ||
+        (item.branch_name?.toLowerCase().includes(lowerSearch));
+
+      const matchesBranch =
+        !isSuperadmin ||
+        selectedBranchId === 'all' ||
+        String(item.branch_id) === String(selectedBranchId);
+
+      return matchesSearch && matchesBranch;
+    });
+  }, [inventory, search, selectedBranchId, isSuperadmin]);
+
+  const sortedInventory = useMemo(() => {
+    return [...filteredInventory].sort((a, b) => {
+      const aValue = a[sortConfig.key] ?? "";
+      const bValue = b[sortConfig.key] ?? "";
+
+      if (typeof aValue === "number" && typeof bValue === "number") {
+        return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
+      }
+
+      return sortConfig.direction === 'asc'
+        ? String(aValue).localeCompare(String(bValue))
+        : String(bValue).localeCompare(String(aValue));
+    });
+  }, [filteredInventory, sortConfig]);
+
+  const requestSort = (key) => {
+    setSortConfig((current) => {
+      if (current.key === key) {
+        return {
+          key,
+          direction: current.direction === 'asc' ? 'desc' : 'asc',
+        };
+      }
+      return { key, direction: 'asc' };
+    });
+  };
+
+  const statusClass = (status) => {
+    if (status === 'available') return 'bg-green-100 text-green-700';
+    if (status === 'low_stock') return 'bg-yellow-100 text-yellow-700';
+    if (status === 'out_of_stock') return 'bg-red-100 text-red-700';
+    return 'bg-gray-100 text-gray-700';
+  };
+
+  const statusLabel = (status) => {
+    if (status === 'available') return 'Available';
+    if (status === 'low_stock') return 'Low Stock';
+    if (status === 'out_of_stock') return 'Out of Stock';
+    return status || 'Unknown';
   };
 
   if (loading) {
@@ -88,180 +215,165 @@ export default function InventoryTab() {
   }
 
   return (
-    <>
-      {/* Search + Filter */}
-      <div className="flex justify-between mb-6">
-        <div className="flex gap-4">
-          <input
-            type="text"
-            placeholder="Search inventory..."
-            value={search}
-            onChange={(e) => {
-              setPage(1);
-              setSearch(e.target.value);
-            }}
-            className="border px-4 py-2 rounded-lg w-64"
-          />
-
-          <select
-            value={filter}
-            onChange={(e) => {
-              setPage(1);
-              setFilter(e.target.value);
-            }}
-            className="border px-4 py-2 rounded-lg"
-          >
-            <option value="all">All Stock</option>
-            <option value="instock">In Stock</option>
-            <option value="lowstock">Low Stock</option>
-            <option value="outofstock">Out of Stock</option>
-          </select>
-
-          <button
-            onClick={handleClear}
-            className="px-4 py-2 border rounded-lg bg-gray-100 hover:bg-gray-200"
-          >
-            Clear
-          </button>
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-semibold text-gray-900">
+            {isSuperadmin ? 'All Inventory Items' : 'Branch Inventory'}
+          </h2>
+          <p className="text-sm text-gray-500">
+            {isSuperadmin ? 'View all ingredients across all branches' : 'Manage branch ingredients and stock levels'}
+          </p>
         </div>
 
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="inline-flex items-center gap-2 rounded-full bg-green-600 px-5 py-2.5 text-white hover:bg-green-700 transition"
+        >
+          <Plus size={16} /> Add Ingredient
+        </button>
       </div>
 
-      {totalPages > 1 && (
-        <div className="flex justify-center items-center gap-2 pb-5">
-          {/* Prev */}
-          <button
-            disabled={page === 1}
-            onClick={() => setPage(page - 1)}
-            className="px-3 py-1 border rounded disabled:opacity-50 hover:bg-gray-100"
-          >
-            « Prev
-          </button>
-
-          {/* Page Numbers */}
-          {Array.from({ length: totalPages }, (_, i) => (
-            <button
-              key={i}
-              onClick={() => setPage(i + 1)}
-              className={`px-3 py-1 border rounded ${
-                page === i + 1
-                  ? "bg-green-600 text-white"
-                  : "hover:bg-gray-100"
-              }`}
-            >
-              {i + 1}
-            </button>
-          ))}
-
-          {/* Next */}
-          <button
-            disabled={page === totalPages}
-            onClick={() => setPage(page + 1)}
-            className="px-3 py-1 border rounded disabled:opacity-50 hover:bg-gray-100"
-          >
-            Next »
-          </button>
+      {errorMessage && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {errorMessage}
         </div>
       )}
 
-      {/* Table */}
-      <div className="bg-white rounded-lg shadow-md border mb-8 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-gray-50 text-left text-xs uppercase font-semibold text-gray-600 border-b">
-                <th className="px-6 py-4">Item Name</th>
-                <th className="px-6 py-4">Branch</th>
-                <th className="px-6 py-4">Units</th>
-                <th className="px-6 py-4">Servings/Unit</th>
-                <th className="px-6 py-4">Total Servings</th>
-                <th className="px-6 py-4">Status</th>
-              </tr>
-            </thead>
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <div className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-2 shadow-sm">
+            <Search size={16} className="text-gray-500" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search ingredient name or ID"
+              className="border-0 p-0 text-sm text-gray-700 focus:outline-none"
+            />
+          </div>
 
-            <tbody className="text-sm text-gray-700">
-              {currentItems.map((item) => {
-                const isLow = item.total_servings <= item.low_stock_threshold;
-                const isEmpty = item.total_servings === 0;
-
-                return (
-                  <tr
-                    key={item.inventory_id}
-                    className="border-b last:border-none hover:bg-gray-50 transition"
-                  >
-                    <td className="px-6 py-4">
-                      <div>
-                        <p className="font-medium text-gray-800">
-                          {item.item_name}
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          Threshold: {item.low_stock_threshold}
-                        </p>
-                      </div>
-                    </td>
-
-                    <td className="px-6 py-4">
-                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                        {item.branch_name || "Branch"}
-                      </span>
-                    </td>
-
-                    <td className="px-6 py-4">{item.quantity}</td>
-                    <td className="px-6 py-4">{item.servings_per_unit}</td>
-
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`font-semibold ${
-                            isLow ? "text-red-600" : "text-gray-800"
-                          }`}
-                        >
-                          {item.total_servings}
-                        </span>
-
-                        {isLow && !isEmpty && (
-                          <span className="text-xs text-yellow-600 flex items-center gap-1 px-2 py-0.5 bg-yellow-100 rounded-full">
-                            <AlertTriangle size={12} /> Low
-                          </span>
-                        )}
-
-                        {isEmpty && (
-                          <span className="text-xs text-red-600 flex items-center gap-1 px-2 py-0.5 bg-red-100 rounded-full">
-                            <AlertTriangle size={12} /> Empty
-                          </span>
-                        )}
-                      </div>
-                    </td>
-
-                    <td className="px-6 py-4">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          item.status === "available"
-                            ? "bg-green-100 text-green-700"
-                            : item.status === "low_stock"
-                            ? "bg-yellow-100 text-yellow-700"
-                            : item.status === "out_of_stock"
-                            ? "bg-red-100 text-red-700"
-                            : "bg-gray-200 text-gray-600"
-                        }`}
-                      >
-                        {item.status.replace(/_/g, " ")}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-
-          {currentItems.length === 0 && (
-            <div className="text-center py-8 text-gray-400">
-              No inventory items found.
-            </div>
+          {isSuperadmin && (
+            <select
+              value={selectedBranchId}
+              onChange={(e) => setSelectedBranchId(e.target.value)}
+              className="rounded-full border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+              <option value="all">All Branches</option>
+              {branches.map((branch) => (
+                <option key={branch.branch_id} value={branch.branch_id}>
+                  {branch.branch_name}
+                </option>
+              ))}
+            </select>
           )}
+        </div>
+
+        <div className="text-sm text-gray-600">
+          {filteredInventory.length} item{filteredInventory.length !== 1 ? 's' : ''}
         </div>
       </div>
 
-    </>
+      <div className="overflow-x-auto rounded-3xl border border-gray-100 bg-white shadow-sm">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              {[
+                ...(isSuperadmin ? [{ label: 'Branch', key: 'branch_name' }] : []),
+                { label: 'Ingredient Name', key: 'item_name' },
+                { label: 'Main Category', key: 'main_category_id' },
+                { label: 'Sub Category', key: 'sub_category_id' },
+                { label: 'Quantity', key: 'quantity' },
+                { label: 'Servings / Unit', key: 'servings_per_unit' },
+                { label: 'Total Servings', key: 'total_servings' },
+                { label: 'Low Stock Threshold', key: 'low_stock_threshold' },
+                { label: 'Status', key: 'status' },
+                { label: 'Actions', key: null },
+              ].map((header) => (
+                <th
+                  key={header.label}
+                  className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"
+                >
+                  {header.key ? (
+                    <button
+                      type="button"
+                      onClick={() => requestSort(header.key)}
+                      className="inline-flex items-center gap-1"
+                    >
+                      {header.label}
+                      {sortConfig.key === header.key ? (
+                        <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
+                      ) : null}
+                    </button>
+                  ) : (
+                    header.label
+                  )}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100 bg-white text-sm text-gray-700">
+            {sortedInventory.map((item) => (
+              <tr key={item.inventory_id} className="hover:bg-gray-50">
+                {isSuperadmin && <td className="px-6 py-4 font-medium text-gray-800">{item.branch_name}</td>}
+                <td className="px-6 py-4 font-medium text-gray-800">{item.item_name}</td>
+                <td className="px-6 py-4">{getMainCategoryName(item.main_category_id)}</td>
+                <td className="px-6 py-4">{getSubCategoryName(item.sub_category_id)}</td>
+                <td className="px-6 py-4">{item.quantity}</td>
+                <td className="px-6 py-4">{item.servings_per_unit}</td>
+                <td className="px-6 py-4">{item.total_servings}</td>
+                <td className="px-6 py-4">{item.low_stock_threshold}</td>
+                <td className="px-6 py-4">
+                  <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${statusClass(item.status)}`}>
+                    {statusLabel(item.status)}
+                  </span>
+                </td>
+                <td className="px-6 py-4">
+                  <button
+                    onClick={() => {
+                      setSelectedIngredient(item);
+                      setShowEditModal(true);
+                    }}
+                    className="inline-flex items-center justify-center rounded-full border border-gray-200 bg-gray-50 px-3 py-2 text-gray-600 hover:bg-gray-100"
+                    title="Edit ingredient"
+                  >
+                    <Edit2 size={16} />
+                  </button>
+                </td>
+              </tr>
+            ))}
+
+            {sortedInventory.length === 0 && (
+              <tr>
+                <td colSpan={isSuperadmin ? 10 : 9} className="px-6 py-16 text-center text-sm text-gray-500">
+                  {isSuperadmin ? 'No inventory items found across all branches.' : 'No inventory items found for this branch.'}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <AddIngredientModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onAdd={handleAddIngredient}
+        branches={branches}
+        inventory={inventory}
+        isSuperadmin={isSuperadmin}
+      />
+
+      <EditIngredientModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setSelectedIngredient(null);
+        }}
+        ingredient={selectedIngredient}
+        onEdit={handleEditIngredient}
+        branches={branches}
+        isSuperadmin={isSuperadmin}
+      />
+    </div>
   );
 }

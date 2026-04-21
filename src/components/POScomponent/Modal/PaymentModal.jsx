@@ -1,16 +1,19 @@
 import React, { useState, useMemo } from "react";
 import { useAlert } from "@/context/AlertContext";
 import SeniorPWDVerificationModal from "./SeniorPWDVerificationModal";
+import SeniorPWDItemDiscountModal from "./SeniorPWDItemDiscountModal";
 
-export default function PaymentModal({ subtotal = 0, vatAdjustedSubtotal = 0, totalAmount = 0, onConfirm, onClose }) {
+export default function PaymentModal({ subtotal = 0, vatAdjustedSubtotal = 0, totalAmount = 0, cart = [], onConfirm, onClose }) {
   const { error: alertError } = useAlert();
 
   const [amountPaid, setAmountPaid] = useState("");
   const [discountType, setDiscountType] = useState("none");
   const [discountValue, setDiscountValue] = useState("");
   const [orderType, setOrderType] = useState("dine-in"); // dine-in or takeout
+  const [showItemDiscountModal, setShowItemDiscountModal] = useState(false);
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [verificationData, setVerificationData] = useState(null);
+  const [itemDiscountData, setItemDiscountData] = useState(null);
 
   const SENIOR_DISCOUNT_PERCENTAGE = 20; // 20% fixed discount for seniors
   const PWD_DISCOUNT_PERCENTAGE = 20; // 20% fixed discount for PWD
@@ -22,11 +25,16 @@ export default function PaymentModal({ subtotal = 0, vatAdjustedSubtotal = 0, to
   const safeDiscountValue = Number(discountValue) || 0;
   const safeAmountPaid = Number(amountPaid) || 0;
 
-  const effectiveSubtotal = (discountType === "senior" || discountType === "pwd")
-    ? (safeVatAdjustedSubtotal || safeSubtotal)
-    : safeSubtotal;
-
+  // Use item discount data if available for Senior/PWD, otherwise calculate standard discount
   const discountAmount = useMemo(() => {
+    if (itemDiscountData) {
+      return itemDiscountData.discountCalculation?.totalDiscountApplied || 0;
+    }
+
+    const effectiveSubtotal = (discountType === "senior" || discountType === "pwd")
+      ? (safeVatAdjustedSubtotal || safeSubtotal)
+      : safeSubtotal;
+
     if (discountType === "percentage") {
       return (effectiveSubtotal * safeDiscountValue) / 100;
     }
@@ -40,7 +48,16 @@ export default function PaymentModal({ subtotal = 0, vatAdjustedSubtotal = 0, to
       return (effectiveSubtotal * PWD_DISCOUNT_PERCENTAGE) / 100;
     }
     return 0;
-  }, [discountType, safeDiscountValue, effectiveSubtotal]);
+  }, [discountType, safeDiscountValue, safeSubtotal, safeVatAdjustedSubtotal, itemDiscountData]);
+
+  const effectiveSubtotal = useMemo(() => {
+    if (itemDiscountData) {
+      return itemDiscountData.discountCalculation?.subtotal || safeSubtotal;
+    }
+    return (discountType === "senior" || discountType === "pwd")
+      ? (safeVatAdjustedSubtotal || safeSubtotal)
+      : safeSubtotal;
+  }, [discountType, safeSubtotal, safeVatAdjustedSubtotal, itemDiscountData]);
 
   const finalAmount = Math.max(effectiveSubtotal - discountAmount, 0);
   const change = safeAmountPaid - finalAmount;
@@ -59,7 +76,6 @@ export default function PaymentModal({ subtotal = 0, vatAdjustedSubtotal = 0, to
       alertError("Payment", "Amount paid is insufficient.");
       return;
     }
-
 
     // Check if verification is required but not completed
     if ((discountType === "senior" || discountType === "pwd") && !verificationData) {
@@ -80,6 +96,7 @@ export default function PaymentModal({ subtotal = 0, vatAdjustedSubtotal = 0, to
         value: discountValueToSend,
         amount: discountAmount,
         verification: verificationData || null,
+        itemDiscounts: itemDiscountData || null,
       },
     });
 
@@ -89,24 +106,43 @@ export default function PaymentModal({ subtotal = 0, vatAdjustedSubtotal = 0, to
   const handleDiscountChange = (newDiscountType) => {
     setDiscountType(newDiscountType);
     setDiscountValue("");
+    setVerificationData(null);
+    setItemDiscountData(null);
     
-    // Show verification modal for senior/pwd discounts
-    if (newDiscountType === "senior" || newDiscountType === "pwd") {
-      // Reset verification data when changing discount type
+    // Show verification modal FIRST for senior/pwd discounts
+    if ((newDiscountType === "senior" || newDiscountType === "pwd")) {
+      // Reset and show verification modal first
       setVerificationData(null);
       setShowVerificationModal(true);
     }
   };
 
+  const handleItemDiscountConfirm = (data) => {
+    setItemDiscountData(data);
+    setShowItemDiscountModal(false);
+  };
+
+  const handleItemDiscountCancel = () => {
+    setShowItemDiscountModal(false);
+    setDiscountType("none");
+    setItemDiscountData(null);
+    setVerificationData(null);
+  };
+
   const handleVerificationConfirm = (data) => {
     setVerificationData(data);
     setShowVerificationModal(false);
+    // After verification, show item discount modal if cart exists
+    if (cart.length > 0) {
+      setShowItemDiscountModal(true);
+    }
   };
 
   const handleVerificationCancel = () => {
     setShowVerificationModal(false);
     setDiscountType("none");
     setVerificationData(null);
+    setItemDiscountData(null);
   };
 
   return (
@@ -312,12 +348,23 @@ export default function PaymentModal({ subtotal = 0, vatAdjustedSubtotal = 0, to
         </div>
       </div>
 
-      {/* Senior/PWD Verification Modal */}
+      {/* Senior/PWD Verification Modal (appears FIRST) */}
       {showVerificationModal && (
         <SeniorPWDVerificationModal
           discountType={discountType}
           onConfirm={handleVerificationConfirm}
           onCancel={handleVerificationCancel}
+        />
+      )}
+
+      {/* Senior/PWD Item Discount Modal (appears AFTER verification) */}
+      {showItemDiscountModal && (
+        <SeniorPWDItemDiscountModal
+          cart={cart}
+          discountType={discountType}
+          verificationData={verificationData}
+          onConfirm={handleItemDiscountConfirm}
+          onCancel={handleItemDiscountCancel}
         />
       )}
     </div>

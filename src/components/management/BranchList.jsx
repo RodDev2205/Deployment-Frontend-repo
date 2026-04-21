@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import API_BASE_URL from '../../config/api';
-import { Store, Eye, FilePenLine, Power, PowerOff } from "lucide-react";
+import { Store, Eye, FilePenLine, Power, PowerOff, Search, X } from "lucide-react";
 import AddBranchModal from "./AddBranches";
 import ViewBranchModal from "./ViewBranchModal";
 import EditBranchModal from "./EditBranchModal";
@@ -9,6 +9,7 @@ export default function BranchList() {
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const [isAddBranchModalOpen, setIsAddBranchModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -148,6 +149,20 @@ export default function BranchList() {
     return "No contact person assigned";
   };
 
+  // FILTER BRANCHES BASED ON SEARCH TERM
+  const filteredBranches = branches.filter((branch) => {
+    const searchLower = searchTerm.toLowerCase();
+    const branchName = (branch.name || branch.branchName || "").toLowerCase();
+    const location = formatLocationText(branch).toLowerCase();
+    const contactPerson = formatContactPerson(branch).toLowerCase();
+    
+    return (
+      branchName.includes(searchLower) ||
+      location.includes(searchLower) ||
+      contactPerson.includes(searchLower)
+    );
+  });
+
   return (
     <div>
       {/* Header */}
@@ -161,6 +176,29 @@ export default function BranchList() {
           <Store className="mr-2 h-4 w-4" />
           Add New Branch
         </button>
+      </div>
+
+      {/* Search Bar */}
+      <div className="mb-6 relative">
+        <div className="relative flex items-center">
+          <Search className="absolute left-3 h-5 w-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search by branch name, location, or contact person..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm("")}
+              className="absolute right-3 text-gray-400 hover:text-gray-600"
+              title="Clear search"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/*  ERROR DISPLAY */}
@@ -181,13 +219,19 @@ export default function BranchList() {
         <p className="text-gray-500">Loading branches...</p>
       ) : (
         <div className="grid gap-4">
-          {branches.length === 0 && !error && (
+          {filteredBranches.length === 0 && branches.length === 0 && !error && (
             <div className="rounded-lg border border-dashed border-gray-300 bg-white p-8 text-center text-gray-500">
               No branches yet.
             </div>
           )}
 
-          {branches.map((branch) => (
+          {filteredBranches.length === 0 && branches.length > 0 && !error && (
+            <div className="rounded-lg border border-dashed border-gray-300 bg-white p-8 text-center text-gray-500">
+              No branches match your search "{searchTerm}".
+            </div>
+          )}
+
+          {filteredBranches.map((branch) => (
             <div
               key={branch.branch_id || Math.random()}
               className="rounded-lg border border-gray-200 bg-white p-6 transition-shadow hover:shadow-md"

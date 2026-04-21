@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useAlert } from "@/context/AlertContext";
 import AddMenuItemModal from "../menu/modal/AddMenuItemModal";
 import EditMenuItemModal from "../menu/modal/EditMenuItemModal";
+import SelectBranchMenuItemsModal from "../menu/modal/SelectBranchMenuItemsModal";
 import { Edit2, Search } from "lucide-react";
 import API_BASE_URL from '../../config/api';
 
@@ -15,6 +16,7 @@ export default function MenuManagementUI() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingDeclined, setEditingDeclined] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [isSelectMenuItemsOpen, setIsSelectMenuItemsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState("Menu List"); // possible values: Menu List, Archived, Declined
@@ -134,6 +136,15 @@ export default function MenuManagementUI() {
     success("Menu Item Added", "Menu item created successfully.");
   };
 
+  const handleBranchMenuSaved = () => {
+    success("Branch Menu Updated", "Selected products are now available for this branch.");
+    if (activeTab === 'Archived') {
+      fetchArchivedItems();
+    } else {
+      fetchProducts('active');
+    }
+  };
+
   const handleEdit = (item) => {
     setSelectedItem(item);
     setEditingDeclined(false);
@@ -142,14 +153,22 @@ export default function MenuManagementUI() {
 
   return (
     <div className="space-y-8 p-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
         <h2 className="text-3xl font-bold">Menu Management</h2>
-        <button
-          onClick={() => setIsAddModalOpen(true)}
-          className="bg-green-600 text-white px-6 py-2 rounded-full hover:bg-green-700 transition"
-        >
-          + Add New Menu Item
-        </button>
+        <div className="flex flex-wrap gap-3">
+          <button
+            onClick={() => setIsSelectMenuItemsOpen(true)}
+            className="bg-blue-600 text-white px-6 py-2 rounded-full hover:bg-blue-700 transition"
+          >
+            Select Menu Items
+          </button>
+          <button
+            onClick={() => setIsAddModalOpen(true)}
+            className="bg-green-600 text-white px-6 py-2 rounded-full hover:bg-green-700 transition"
+          >
+            + Add New Menu Item
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -313,6 +332,14 @@ export default function MenuManagementUI() {
         item={selectedItem}
         categories={categories}
         declined={editingDeclined}
+      />
+      <SelectBranchMenuItemsModal
+        isOpen={isSelectMenuItemsOpen}
+        onClose={() => setIsSelectMenuItemsOpen(false)}
+        onSaved={() => {
+          handleBranchMenuSaved();
+          setIsSelectMenuItemsOpen(false);
+        }}
       />
     </div>
   );

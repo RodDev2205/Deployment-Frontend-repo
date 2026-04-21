@@ -94,6 +94,7 @@ export default function POSCashier({ isCashier, isAdmin }) {
           amountPaid: paymentData.amountPaid,
           discount: paymentData.discount,
           orderType: paymentData.orderType || "dine-in",
+          finalAmount: paymentData.finalAmount,
         }),
       });
 
@@ -173,6 +174,7 @@ export default function POSCashier({ isCashier, isAdmin }) {
       <PaymentModal
         subtotal={subtotal}
         vatAdjustedSubtotal={vatAdjustedSubtotal}
+        cart={cart}
         onConfirm={handleCheckout}
         onClose={() => setModalOpen(false)}
       />

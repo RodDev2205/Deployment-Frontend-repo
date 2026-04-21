@@ -3,16 +3,61 @@ import React, { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import API_BASE_URL from '../../../config/api';
 
-const AddIngredientModal = ({ isOpen, onClose, onAdd }) => {
+const AddIngredientModal = ({ isOpen, onClose, onAdd, branches = [], inventory = [], isSuperadmin = false }) => {
   const [form, setForm] = useState({
     item_name: "",
     quantity: 1,
     servings_per_unit: 1,
     low_stock_threshold: 5,
-    status: "available", // match backend enum
+    status: "available",
+    branch_id: "",
+    main_category_id: "",
+    sub_category_id: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [mainCategories, setMainCategories] = useState([]);
+  const [subCategories, setSubCategories] = useState([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+
+  // Fetch categories
+  useEffect(() => {
+    if (isOpen) {
+      fetchCategories();
+    }
+  }, [isOpen]);
+
+  const fetchCategories = async () => {
+    try {
+      setCategoriesLoading(true);
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("Not authenticated");
+
+      // Fetch main categories
+      const mainRes = await fetch(`${API_BASE_URL}/api/inventory/main-categories`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (mainRes.ok) {
+        const mainData = await mainRes.json();
+        setMainCategories(Array.isArray(mainData) ? mainData : mainData.data || []);
+      }
+
+      // Fetch sub categories
+      const subRes = await fetch(`${API_BASE_URL}/api/inventory/sub-categories`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (subRes.ok) {
+        const subData = await subRes.json();
+        setSubCategories(Array.isArray(subData) ? subData : subData.data || []);
+      }
+    } catch (err) {
+      console.error("Error fetching categories:", err);
+    } finally {
+      setCategoriesLoading(false);
+    }
+  };
 
   // Lock scroll when modal is open
   useEffect(() => {
@@ -22,20 +67,66 @@ const AddIngredientModal = ({ isOpen, onClose, onAdd }) => {
     };
   }, [isOpen]);
 
+  useEffect(() => {
+    if (isSuperadmin && branches.length > 0 && !form.branch_id) {
+      setForm((prev) => ({ ...prev, branch_id: branches[0].branch_id }));
+    }
+  }, [isSuperadmin, branches]);
+
   if (!isOpen) return null;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({
       ...prev,
-      [name]: name === "item_name" || name === "status" ? value : Number(value),
+      [name]: name === "item_name" || name === "status" ? value : Number(value) || value,
     }));
   };
+
+  // Filter subcategories based on selected main category
+  const filteredSubCategories = form.main_category_id
+    ? subCategories.filter(
+        (sub) => Number(sub.main_category_id) === Number(form.main_category_id)
+      )
+    : [];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
+
+    const trimmedName = form.item_name.trim();
+    if (!trimmedName) {
+      setError("Ingredient name is required.");
+      setLoading(false);
+      return;
+    }
+
+    if (!form.main_category_id || !form.sub_category_id) {
+      setError("Please select both main and sub categories.");
+      setLoading(false);
+      return;
+    }
+
+    const branchIdToCheck = isSuperadmin ? form.branch_id : inventory[0]?.branch_id;
+    if (isSuperadmin && !branchIdToCheck) {
+      setError("Please select a branch.");
+      setLoading(false);
+      return;
+    }
+
+    const duplicate = inventory.some((item) => {
+      const itemBranchId = String(item.branch_id);
+      const formBranchId = String(branchIdToCheck);
+      const existingName = item.item_name?.trim().toLowerCase();
+      return itemBranchId === formBranchId && existingName === trimmedName.toLowerCase();
+    });
+
+    if (duplicate) {
+      setError("An ingredient with that name already exists for the selected branch.");
+      setLoading(false);
+      return;
+    }
 
     try {
       const token = localStorage.getItem("token");
@@ -53,13 +144,11 @@ const AddIngredientModal = ({ isOpen, onClose, onAdd }) => {
         }
       );
 
-      // Check response status first
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
         throw new Error(data.message || `Failed to add ingredient (${response.status})`);
       }
 
-      // Parse response
       let data = {};
       try {
         data = await response.json();
@@ -67,19 +156,19 @@ const AddIngredientModal = ({ isOpen, onClose, onAdd }) => {
         console.warn("Response parsing issue, continuing anyway:", e);
       }
 
-      // Save form data before resetting
       const submittedForm = { ...form };
 
-      // Reset form
       setForm({
         item_name: "",
         quantity: 1,
         servings_per_unit: 1,
         low_stock_threshold: 5,
-        status: "active",
+        status: "available",
+        branch_id: isSuperadmin && branches.length > 0 ? branches[0].branch_id : "",
+        main_category_id: "",
+        sub_category_id: "",
       });
 
-      // Add ingredient to parent with saved form data
       if (onAdd) {
         onAdd({
           ...submittedForm,
@@ -88,7 +177,6 @@ const AddIngredientModal = ({ isOpen, onClose, onAdd }) => {
         });
       }
 
-      // Stop loading and close
       setLoading(false);
       onClose();
     } catch (err) {
@@ -107,7 +195,7 @@ const AddIngredientModal = ({ isOpen, onClose, onAdd }) => {
       />
 
       {/* Modal content */}
-      <div className="relative bg-white rounded-3xl shadow-xl w-full max-w-md p-6 z-10 animate-fadeIn">
+      <div className="relative bg-white rounded-3xl shadow-xl w-full max-w-md p-6 z-10 animate-fadeIn max-h-[90vh] overflow-y-auto">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-full transition"
@@ -137,6 +225,52 @@ const AddIngredientModal = ({ isOpen, onClose, onAdd }) => {
               required
               className="w-full px-4 py-2.5 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 focus:outline-none"
             />
+          </div>
+
+          {/* Main Category */}
+          <div>
+            <label className="text-sm text-gray-600">Main Category</label>
+            <select
+              name="main_category_id"
+              value={form.main_category_id}
+              onChange={handleChange}
+              required
+              disabled={categoriesLoading}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 focus:outline-none"
+            >
+              <option value="">
+                {categoriesLoading ? "Loading..." : "Select main category"}
+              </option>
+              {mainCategories.map((cat) => (
+                <option key={cat.main_category_id} value={cat.main_category_id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Sub Category */}
+          <div>
+            <label className="text-sm text-gray-600">Sub Category</label>
+            <select
+              name="sub_category_id"
+              value={form.sub_category_id}
+              onChange={handleChange}
+              required
+              disabled={!form.main_category_id || categoriesLoading}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 focus:outline-none disabled:bg-gray-100"
+            >
+              <option value="">
+                {!form.main_category_id
+                  ? "Select main category first"
+                  : "Select sub category"}
+              </option>
+              {filteredSubCategories.map((cat) => (
+                <option key={cat.sub_category_id} value={cat.sub_category_id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Quantity */}
@@ -180,6 +314,29 @@ const AddIngredientModal = ({ isOpen, onClose, onAdd }) => {
               className="w-full px-4 py-2.5 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 focus:outline-none"
             />
           </div>
+
+          {isSuperadmin && (
+            <div>
+              <label className="text-sm text-gray-600">Branch</label>
+              <select
+                name="branch_id"
+                value={form.branch_id}
+                onChange={handleChange}
+                required
+                disabled={branches.length === 0}
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 focus:outline-none"
+              >
+                <option value="" disabled>
+                  {branches.length === 0 ? "No branches available" : "Select branch"}
+                </option>
+                {branches.map((branch) => (
+                  <option key={branch.branch_id} value={branch.branch_id}>
+                    {branch.branch_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Status */}
           <div>
