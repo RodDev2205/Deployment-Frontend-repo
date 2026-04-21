@@ -33,6 +33,13 @@ export default function EditMenuItemModal({ isOpen, onClose, onSaved, item, cate
 
   const productNameRef = useRef(null);
 
+  // Filter ingredients based on search term and category
+  const filteredIngredients = fetchedIngredients.filter((inv) => {
+    const matchesSearch = inv.name.toLowerCase().includes(ingredientSearchTerm.toLowerCase());
+    const matchesCategory = !ingredientCategoryFilter || inv.category === ingredientCategoryFilter;
+    return matchesSearch && matchesCategory;
+  });
+
   // when modal opens, prefill
   useEffect(() => {
     if (isOpen && item) {
@@ -71,17 +78,21 @@ export default function EditMenuItemModal({ isOpen, onClose, onSaved, item, cate
     setLoadingIngredients(true);
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`${API_INVENTORY}/get-ingredients?page=${pageToLoad}&limit=${limit}`, {
+      const res = await fetch(`${API_BASE_URL}/api/branch-inventory`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      const items = Array.isArray(data) ? data : data.data || [];
-      const normalized = items.map((i) => ({ 
-        id: i.inventory_id ?? i.id, 
+      const items = Array.isArray(data) ? data : [];
+      const normalized = items.map((i) => ({
+        id: i.inventory_id ?? i.ingredient_id ?? i.id,
         name: i.item_name ?? i.name,
+        stock_units: i.stock_units ?? 0,
+        total_servings: i.total_servings ?? 0,
+        status: i.status ?? "unknown",
         category: i.category_name ?? i.category ?? ''
       }));
       setFetchedIngredients((prev) => (pageToLoad === 1 ? normalized : [...prev, ...normalized]));
+      setHasMore(false);
       
       // Extract unique categories from ingredients
       if (pageToLoad === 1) {
@@ -93,7 +104,7 @@ export default function EditMenuItemModal({ isOpen, onClose, onSaved, item, cate
       setPage(pageToLoad);
     } catch (err) {
       console.error(err);
-      setError("Failed to load inventory items");
+      setError("Failed to load ingredient items");
     } finally {
       setLoadingIngredients(false);
     }
@@ -108,7 +119,7 @@ export default function EditMenuItemModal({ isOpen, onClose, onSaved, item, cate
       if (!res.ok) return;
       const data = await res.json();
       // transform to { id, quantity }
-      const linked = data.map((r) => ({ id: r.inventory_id, quantity: r.servings_required }));
+      const linked = data.map((r) => ({ id: r.inventory_id ?? r.ingredient_id ?? r.id, quantity: r.servings_required }));
       setNewItem((prev) => ({ ...prev, ingredients: linked }));
     } catch (err) {
       console.error(err);
@@ -318,7 +329,6 @@ export default function EditMenuItemModal({ isOpen, onClose, onSaved, item, cate
                 ) : (
                   <div className="text-center py-6 text-sm text-gray-500">No inventory items</div>
                 )}
-                {loadingIngredients && <div className="text-center py-2 text-sm">Loading...</div>}
               </div>
 
               {/* Selected Count */}
@@ -339,3 +349,7 @@ export default function EditMenuItemModal({ isOpen, onClose, onSaved, item, cate
     </div>
   );
 }
+
+
+
+

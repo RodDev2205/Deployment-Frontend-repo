@@ -17,10 +17,13 @@ import {
 
 import { useRef } from "react";
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable"; // for table exports, used below
+import autoTable from "jspdf-autotable";
+import html2canvas from "html2canvas";
 
 export default function AdminReportsPage() {
   const reportRef = useRef();
+  const salesChartRef = useRef();
+  const pieChartRef = useRef();
   const [dailySales, setDailySales] = useState([]);
   const [todaySales, setTodaySales] = useState(null);
   const [period, setPeriod] = useState('daily'); // daily, weekly, monthly
@@ -30,6 +33,7 @@ export default function AdminReportsPage() {
   const [topProducts, setTopProducts] = useState([]); // product ranking
   const [voidTracking, setVoidTracking] = useState([]); // void tracking data
   const [voidPage, setVoidPage] = useState(1); // current page for void tracking
+  const [pdfGenerating, setPdfGenerating] = useState(false); // PDF generation state
   const itemsPerPage = 5; // items per page for void tracking
 
   const [refreshTrigger, setRefreshTrigger] = useState(0); // To trigger refetch
@@ -240,36 +244,343 @@ export default function AdminReportsPage() {
     URL.revokeObjectURL(url);
   };
 
-  const exportPDF = () => {
-    // build pdf manually to avoid html2canvas errors with tailwind colors
-    const doc = new jsPDF('p', 'pt', 'a4');
-    doc.setFontSize(18);
-    doc.text('Branch Report', 40, 40);
+  const exportPDF = async () => {
+    try {
+      const doc = new jsPDF('p', 'mm', 'a4');
+      // Set font to support special characters better
+      doc.setFont('helvetica');
+      
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      let yPosition = 15;
+      const margin = 12;
+      const contentWidth = pageWidth - 2 * margin;
 
-    // KPIs summary
-    doc.setFontSize(12);
-    let y = 60;
-    kpis.forEach(k => {
-      doc.text(`${k.title}: ${k.value}`, 40, y);
-      y += 20;
-    });
+      // ===== PAGE 1: HEADER & KPIs =====
+      // Header
+      doc.setFontSize(24);
+      doc.setTextColor(25, 25, 112); // Dark blue
+      doc.text('BRANCH REPORT', margin, yPosition);
+      yPosition += 8;
 
-    // add sales trend note
-    y += 10;
-    doc.text('Sales Trend: see application charts', 40, y);
-    y += 20;
+      // Date
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      doc.text('Generated: ' + dateStr, margin, yPosition);
+      yPosition += 12;
 
-    // Top products table
-    const tableBody = topProducts.map(p => [p.product_name || '', p.total_qty || 0, p.total_amount || 0]);
-    autoTable(doc, {
-      head: [['Product', 'Qty Sold', 'Total Amount']],
-      body: tableBody,
-      startY: y,
-      theme: 'grid',
-      styles: { fontSize: 10 },
-    });
+      // Divider line
+      doc.setDrawColor(25, 25, 112);
+      doc.line(margin, yPosition, pageWidth - margin, yPosition);
+      yPosition += 8;
 
-    doc.save('branch_report.pdf');
+      // KPIs Grid (2x3)
+      doc.setFontSize(11);
+      doc.setTextColor(0, 0, 0);
+      const kpiWidth = (contentWidth - 4) / 2; // 2 columns with 4mm gap
+      const kpiHeight = 28;
+      let kpiIndex = 0;
+
+      for (let row = 0; row < 3; row++) {
+        for (let col = 0; col < 2; col++) {
+          if (kpiIndex >= kpis.length) break;
+          
+          const kpi = kpis[kpiIndex];
+          const xPos = margin + col * (kpiWidth + 4);
+          const yPos = yPosition + row * (kpiHeight + 4);
+
+          // Box background
+          doc.setFillColor(240, 248, 255); // Alice blue
+          doc.rect(xPos, yPos, kpiWidth, kpiHeight, 'F');
+          doc.setDrawColor(25, 25, 112);
+          doc.rect(xPos, yPos, kpiWidth, kpiHeight);
+
+          // KPI Title - escape special characters
+          doc.setFontSize(9);
+          doc.setTextColor(100, 100, 100);
+          const titleText = String(kpi.title).replace(/&/g, 'and').replace(/[+_]/g, ' ');
+          doc.text(titleText, xPos + 3, yPos + 5);
+
+          // KPI Value - remove problematic symbols and use plain format
+          doc.setFontSize(12);
+          doc.setTextColor(25, 25, 112);
+          doc.setFont(undefined, 'bold');
+          let valueText = String(kpi.value);
+          // Replace peso symbol with "PHP "
+          valueText = valueText.replace('₱', 'PHP ').replace(/[^\w\s.,\-()]/g, '');
+          doc.text(valueText, xPos + 3, yPos + 13);
+
+          // KPI Subtitle
+          doc.setFont(undefined, 'normal');
+          doc.setFontSize(8);
+          doc.setTextColor(150, 150, 150);
+          if (kpi.subtitle) {
+            const subtitleText = String(kpi.subtitle).replace(/&/g, 'and');
+            doc.text(subtitleText, xPos + 3, yPos + 19);
+          }
+
+          kpiIndex++;
+        }
+      }
+
+      yPosition += 3 * (kpiHeight + 4) + 8;
+
+      // ===== EXECUTIVE SUMMARY =====
+      if (yPosition > pageHeight - 60) {
+        doc.addPage();
+        yPosition = 15;
+      }
+
+      doc.setTextColor(25, 25, 112);
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'bold');
+      doc.text('Executive Summary', margin, yPosition);
+      yPosition += 6;
+
+      doc.setFont(undefined, 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(50, 50, 50);
+
+      // Build summary text
+      const completedTransactions = paymentData.find(p => p.name === 'Completed')?.value || 0;
+      const voidedTransactions = paymentData.find(p => p.name === 'Voided')?.value || 0;
+      const partialVoidedTransactions = paymentData.find(p => p.name === 'Partial Voided')?.value || 0;
+      const totalTx = completedTransactions + voidedTransactions + partialVoidedTransactions;
+      const completionRate = totalTx > 0 ? ((completedTransactions / totalTx) * 100).toFixed(1) : 0;
+
+      const summaryText = `Overall Business Performance:\n\nYour branch completed PHP ${(todaySales?.total_sales || 0).toLocaleString('en-US', {minimumFractionDigits: 2})} in net sales today with ${todaySales?.completed_count || 0} completed orders. The transaction completion rate stands at ${completionRate}%, with ${voidedTransactions} voided and ${partialVoidedTransactions} partially voided transactions. Your top performing staff member processed PHP ${(todaySales?.avg_order_value || 0).toLocaleString('en-US', {minimumFractionDigits: 2})} in average order value. This report provides detailed insights into sales trends, product performance, and transaction management.`;
+
+      doc.text(summaryText, margin, yPosition, { maxWidth: contentWidth, align: 'justify' });
+      yPosition += doc.getTextDimensions(summaryText, { maxWidth: contentWidth }).h + 8;
+
+      // ===== PAGE 2: CHARTS =====
+      if (yPosition > pageHeight - 80) {
+        doc.addPage();
+        yPosition = 15;
+      }
+
+      doc.setTextColor(25, 25, 112);
+      doc.setFontSize(14);
+      doc.setFont(undefined, 'bold');
+      doc.text('Sales Analytics', margin, yPosition);
+      yPosition += 8;
+
+      // Capture Sales Chart
+      let maxChartHeight = 50;
+      if (salesChartRef.current) {
+        try {
+          const canvas = await html2canvas(salesChartRef.current, {
+            allowTaint: true,
+            useCORS: true,
+            backgroundColor: '#ffffff',
+            scale: 1.5,
+          });
+          const chartImage = canvas.toDataURL('image/png');
+          const chartWidth = contentWidth / 2 - 2;
+          const chartHeight = 50;
+          
+          doc.addImage(chartImage, 'PNG', margin, yPosition, chartWidth, chartHeight);
+
+          // Add text interpretation for Sales Chart
+          doc.setFontSize(9);
+          doc.setTextColor(0, 0, 0);
+          doc.setFont(undefined, 'normal');
+          
+          // Calculate statistics
+          const sales = dailySales.map(d => d.sales || 0);
+          const maxSales = Math.max(...sales);
+          const minSales = Math.min(...sales);
+          const avgSales = sales.reduce((a, b) => a + b, 0) / sales.length;
+          const highestDay = dailySales.find(d => d.sales === maxSales);
+          const lowestDay = dailySales.find(d => d.sales === minSales);
+          const trend = sales[sales.length - 1] > sales[0] ? 'upward' : 'downward';
+          
+          // Build sales interpretation with proper fallbacks
+          const highestDayStr = highestDay?.date ? highestDay.date : 'period';
+          const lowestDayStr = lowestDay?.date ? lowestDay.date : 'period';
+          const isValidData = dailySales && dailySales.length > 0;
+          
+          let salesInterpretation = '';
+          if (isValidData) {
+            salesInterpretation = `Sales Trend Analysis: Peak sales of PHP ${maxSales.toLocaleString('en-US', {minimumFractionDigits: 2})} recorded on ${highestDayStr}. Lowest sales of PHP ${minSales.toLocaleString('en-US', {minimumFractionDigits: 2})} on ${lowestDayStr}. Average daily sales: PHP ${avgSales.toLocaleString('en-US', {minimumFractionDigits: 2})}. Overall ${trend} trend observed over the period.`;
+          } else {
+            salesInterpretation = 'No sales data available for this period.';
+          }
+          
+          const salesTextHeight = doc.getTextDimensions(salesInterpretation, { maxWidth: contentWidth / 2 - 2 }).h;
+          doc.text(salesInterpretation, margin, yPosition + chartHeight + 2, { maxWidth: contentWidth / 2 - 2, align: 'left' });
+          maxChartHeight = chartHeight + salesTextHeight + 4;
+        } catch (e) {
+          console.error('Error capturing sales chart:', e);
+        }
+      }
+
+      // Capture Pie Chart
+      if (pieChartRef.current) {
+        try {
+          const canvas = await html2canvas(pieChartRef.current, {
+            allowTaint: true,
+            useCORS: true,
+            backgroundColor: '#ffffff',
+            scale: 1.5,
+          });
+          const chartImage = canvas.toDataURL('image/png');
+          const chartWidth = contentWidth / 2 - 2;
+          const chartHeight = 50;
+          
+          doc.addImage(chartImage, 'PNG', margin + contentWidth / 2 + 2, yPosition, chartWidth, chartHeight);
+          
+          // Add text interpretation for Pie Chart
+          doc.setFontSize(9);
+          doc.setTextColor(0, 0, 0);
+          doc.setFont(undefined, 'normal');
+          
+          // Calculate percentages
+          const totalTransactions = paymentData.reduce((sum, item) => sum + item.value, 0);
+          let transactionSummary = 'Transaction Status: ';
+          paymentData.forEach((item, idx) => {
+            const pct = totalTransactions > 0 ? ((item.value / totalTransactions) * 100).toFixed(1) : 0;
+            if (idx > 0) transactionSummary += ' | ';
+            transactionSummary += `${item.name}: ${item.value} (${pct}%)`;
+          });
+          
+          const pieTextHeight = doc.getTextDimensions(transactionSummary, { maxWidth: contentWidth / 2 - 2 }).h;
+          doc.text(transactionSummary, margin + contentWidth / 2 + 2, yPosition + chartHeight + 2, { maxWidth: contentWidth / 2 - 2, align: 'left' });
+          if (chartHeight + pieTextHeight + 4 > maxChartHeight) {
+            maxChartHeight = chartHeight + pieTextHeight + 4;
+          }
+        } catch (e) {
+          console.error('Error capturing pie chart:', e);
+        }
+      }
+
+      yPosition += maxChartHeight + 8;
+
+      // ===== TOP PRODUCTS TABLE =====
+      if (yPosition > pageHeight - 80) {
+        doc.addPage();
+        yPosition = 15;
+      }
+
+      doc.setTextColor(25, 25, 112);
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'bold');
+      doc.text('Top Selling Products', margin, yPosition);
+      yPosition += 6;
+
+      const topProductsData = topProducts.map(p => [
+        (p.product_name || 'Unknown').substring(0, 30),
+        String(p.total_qty || 0),
+        'PHP ' + Number(p.total_amount).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})
+      ]);
+
+      autoTable(doc, {
+        head: [['Product', 'Qty Sold', 'Total Amount']],
+        body: topProductsData,
+        startY: yPosition,
+        margin: margin,
+        theme: 'grid',
+        headStyles: {
+          fillColor: [25, 25, 112],
+          textColor: 255,
+          fontSize: 10,
+          fontStyle: 'bold',
+          halign: 'center'
+        },
+        bodyStyles: {
+          fontSize: 9,
+          textColor: [0, 0, 0]
+        },
+        alternateRowStyles: {
+          fillColor: [245, 248, 255]
+        },
+        columnStyles: {
+          0: { halign: 'left' },
+          1: { halign: 'center' },
+          2: { halign: 'right' }
+        }
+      });
+
+      yPosition = doc.lastAutoTable.finalY + 8;
+
+      // ===== VOID TRACKING TABLE =====
+      if (yPosition > pageHeight - 100) {
+        doc.addPage();
+        yPosition = 15;
+      }
+
+      doc.setTextColor(25, 25, 112);
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'bold');
+      doc.text('Void Tracking', margin, yPosition);
+      yPosition += 6;
+
+      // Only show first 10 void records in PDF
+      const voidTrackingData = voidTracking.slice(0, 10).map(v => [
+        (v.transaction_number || '').substring(0, 15),
+        (v.cashier || '').substring(0, 15),
+        (v.item || '').substring(0, 20),
+        'PHP ' + Number(v.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}),
+        (v.type || '').substring(0, 10),
+        (v.reason || '').substring(0, 20)
+      ]);
+
+      autoTable(doc, {
+        head: [['Transaction', 'Cashier', 'Item', 'Amount', 'Type', 'Reason']],
+        body: voidTrackingData,
+        startY: yPosition,
+        margin: margin,
+        theme: 'grid',
+        headStyles: {
+          fillColor: [220, 20, 60], // Crimson for void tracking
+          textColor: 255,
+          fontSize: 9,
+          fontStyle: 'bold',
+          halign: 'center'
+        },
+        bodyStyles: {
+          fontSize: 8,
+          textColor: [0, 0, 0]
+        },
+        alternateRowStyles: {
+          fillColor: [255, 240, 245]
+        },
+        columnStyles: {
+          0: { halign: 'center' },
+          1: { halign: 'left' },
+          2: { halign: 'left' },
+          3: { halign: 'right' },
+          4: { halign: 'center' },
+          5: { halign: 'left' }
+        }
+      });
+
+      // ===== FOOTER ON EACH PAGE =====
+      const totalPages = doc.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        const pageHeight = doc.internal.pageSize.getHeight();
+        
+        // Footer line
+        doc.setDrawColor(25, 25, 112);
+        doc.line(margin, pageHeight - 10, pageWidth - margin, pageHeight - 10);
+        
+        // Page number
+        doc.setFontSize(9);
+        doc.setTextColor(100, 100, 100);
+        doc.text('Page ' + i + ' of ' + totalPages, pageWidth - margin - 20, pageHeight - 5, { align: 'right' });
+
+        // Company name / footer text
+        doc.setFontSize(8);
+        doc.text('Report Generated: ' + new Date().toLocaleString(), margin, pageHeight - 5);
+      }
+
+      doc.save('Branch_Report_' + new Date().toISOString().split('T')[0] + '.pdf');
+    } catch (err) {
+      console.error('Error generating PDF:', err);
+      alert('Error generating PDF. Please try again.');
+    }
   };
 
   return (
@@ -290,10 +601,18 @@ export default function AdminReportsPage() {
             CSV
           </button>
           <button
-            onClick={exportPDF}
-            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-xl shadow-md hover:opacity-90"
+            onClick={async () => {
+              setPdfGenerating(true);
+              try {
+                await exportPDF();
+              } finally {
+                setPdfGenerating(false);
+              }
+            }}
+            disabled={pdfGenerating}
+            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-xl shadow-md hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            PDF
+            {pdfGenerating ? 'Generating...' : 'PDF'}
           </button>
         </div>
       </div>
@@ -327,7 +646,7 @@ export default function AdminReportsPage() {
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Sales Trend */}
-        <div className="bg-white rounded-2xl shadow-md p-6">
+        <div ref={salesChartRef} className="bg-white rounded-2xl shadow-md p-6">
           <h2 className="text-lg font-semibold mb-4">
             {period.charAt(0).toUpperCase() + period.slice(1)} Sales Trend (Last 7 Days)
           </h2>
@@ -349,7 +668,7 @@ export default function AdminReportsPage() {
         </div>
 
         {/* Payment method pie chart */}
-        <div className="bg-white rounded-2xl shadow-md p-6">
+        <div ref={pieChartRef} className="bg-white rounded-2xl shadow-md p-6">
           <h2 className="text-lg font-semibold mb-4">Transaction's Breakdown</h2>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>

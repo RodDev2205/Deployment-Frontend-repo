@@ -10,6 +10,7 @@ export default function BranchList() {
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const [isAddBranchModalOpen, setIsAddBranchModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -21,7 +22,6 @@ export default function BranchList() {
 
   const [selectedBranch, setSelectedBranch] = useState(null);
   const [userRole, setUserRole] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
 
   //  FETCH WITH FULL ERROR HANDLING
   const fetchBranches = async () => {
@@ -167,16 +167,16 @@ export default function BranchList() {
     return "No contact person assigned";
   };
 
-  // Filter branches based on search term
+  // FILTER BRANCHES BASED ON SEARCH TERM
   const filteredBranches = branches.filter((branch) => {
     const searchLower = searchTerm.toLowerCase();
     const branchName = (branch.name || branch.branchName || "").toLowerCase();
-    const branchLocation = (branch.locationText || branch.address || "").toLowerCase();
+    const location = formatLocationText(branch).toLowerCase();
     const contactPerson = formatContactPerson(branch).toLowerCase();
     
     return (
       branchName.includes(searchLower) ||
-      branchLocation.includes(searchLower) ||
+      location.includes(searchLower) ||
       contactPerson.includes(searchLower)
     );
   });
@@ -239,7 +239,7 @@ export default function BranchList() {
         <p className="text-gray-500">Loading branches...</p>
       ) : (
         <div className="grid gap-4">
-          {branches.length === 0 && !error && (
+          {filteredBranches.length === 0 && branches.length === 0 && !error && (
             <div className="rounded-lg border border-dashed border-gray-300 bg-white p-8 text-center text-gray-500">
               No branches yet.
             </div>
@@ -247,7 +247,7 @@ export default function BranchList() {
 
           {filteredBranches.length === 0 && branches.length > 0 && !error && (
             <div className="rounded-lg border border-dashed border-gray-300 bg-white p-8 text-center text-gray-500">
-              No branches match your search.
+              No branches match your search "{searchTerm}".
             </div>
           )}
 

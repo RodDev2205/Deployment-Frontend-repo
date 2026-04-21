@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useAlert } from "@/context/AlertContext";
 import SeniorPWDVerificationModal from "./SeniorPWDVerificationModal";
+import SeniorPWDItemDiscountModal from "./SeniorPWDItemDiscountModal";
 
 export default function PaymentModal({ subtotal = 0, vatAdjustedSubtotal = 0, totalAmount = 0, cart = [], onConfirm, onClose }) {
   const { error: alertError } = useAlert();
@@ -9,9 +10,10 @@ export default function PaymentModal({ subtotal = 0, vatAdjustedSubtotal = 0, to
   const [discountType, setDiscountType] = useState("none");
   const [discountValue, setDiscountValue] = useState("");
   const [orderType, setOrderType] = useState("dine-in"); // dine-in or takeout
+  const [showItemDiscountModal, setShowItemDiscountModal] = useState(false);
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [verificationData, setVerificationData] = useState(null);
-  const [selectedDiscountItem, setSelectedDiscountItem] = useState(null); // For PWD/Senior item discount
+  const [itemDiscountData, setItemDiscountData] = useState(null);
 
   const SENIOR_DISCOUNT_PERCENTAGE = 20; // 20% fixed discount for seniors
   const PWD_DISCOUNT_PERCENTAGE = 20; // 20% fixed discount for PWD
@@ -23,11 +25,16 @@ export default function PaymentModal({ subtotal = 0, vatAdjustedSubtotal = 0, to
   const safeDiscountValue = Number(discountValue) || 0;
   const safeAmountPaid = Number(amountPaid) || 0;
 
-  const effectiveSubtotal = (discountType === "senior" || discountType === "pwd")
-    ? (safeVatAdjustedSubtotal || safeSubtotal)
-    : safeSubtotal;
-
+  // Use item discount data if available for Senior/PWD, otherwise calculate standard discount
   const discountAmount = useMemo(() => {
+    if (itemDiscountData) {
+      return itemDiscountData.discountCalculation?.totalDiscountApplied || 0;
+    }
+
+    const effectiveSubtotal = (discountType === "senior" || discountType === "pwd")
+      ? (safeVatAdjustedSubtotal || safeSubtotal)
+      : safeSubtotal;
+
     if (discountType === "percentage") {
       return (effectiveSubtotal * safeDiscountValue) / 100;
     }
@@ -41,7 +48,16 @@ export default function PaymentModal({ subtotal = 0, vatAdjustedSubtotal = 0, to
       return (effectiveSubtotal * PWD_DISCOUNT_PERCENTAGE) / 100;
     }
     return 0;
-  }, [discountType, safeDiscountValue, effectiveSubtotal]);
+  }, [discountType, safeDiscountValue, safeSubtotal, safeVatAdjustedSubtotal, itemDiscountData]);
+
+  const effectiveSubtotal = useMemo(() => {
+    if (itemDiscountData) {
+      return itemDiscountData.discountCalculation?.subtotal || safeSubtotal;
+    }
+    return (discountType === "senior" || discountType === "pwd")
+      ? (safeVatAdjustedSubtotal || safeSubtotal)
+      : safeSubtotal;
+  }, [discountType, safeSubtotal, safeVatAdjustedSubtotal, itemDiscountData]);
 
   const finalAmount = Math.max(effectiveSubtotal - discountAmount, 0);
   const change = safeAmountPaid - finalAmount;
@@ -61,16 +77,9 @@ export default function PaymentModal({ subtotal = 0, vatAdjustedSubtotal = 0, to
       return;
     }
 
-
     // Check if verification is required but not completed
     if ((discountType === "senior" || discountType === "pwd") && !verificationData) {
       alertError("Verification Required", "Please verify Senior/PWD information first.");
-      return;
-    }
-
-    // Check if item is selected for PWD/Senior discount
-    if ((discountType === "senior" || discountType === "pwd") && selectedDiscountItem === null) {
-      alertError("Item Selection Required", "Please select which item to apply the discount on.");
       return;
     }
 
@@ -87,7 +96,7 @@ export default function PaymentModal({ subtotal = 0, vatAdjustedSubtotal = 0, to
         value: discountValueToSend,
         amount: discountAmount,
         verification: verificationData || null,
-        selectedItemIndex: selectedDiscountItem, // Index of the item to apply discount to
+        itemDiscounts: itemDiscountData || null,
       },
     });
 
@@ -97,26 +106,43 @@ export default function PaymentModal({ subtotal = 0, vatAdjustedSubtotal = 0, to
   const handleDiscountChange = (newDiscountType) => {
     setDiscountType(newDiscountType);
     setDiscountValue("");
-    setSelectedDiscountItem(null); // Reset selected item when discount type changes
+    setVerificationData(null);
+    setItemDiscountData(null);
     
-    // Show verification modal for senior/pwd discounts
-    if (newDiscountType === "senior" || newDiscountType === "pwd") {
-      // Reset verification data when changing discount type
+    // Show verification modal FIRST for senior/pwd discounts
+    if ((newDiscountType === "senior" || newDiscountType === "pwd")) {
+      // Reset and show verification modal first
       setVerificationData(null);
       setShowVerificationModal(true);
     }
   };
 
+  const handleItemDiscountConfirm = (data) => {
+    setItemDiscountData(data);
+    setShowItemDiscountModal(false);
+  };
+
+  const handleItemDiscountCancel = () => {
+    setShowItemDiscountModal(false);
+    setDiscountType("none");
+    setItemDiscountData(null);
+    setVerificationData(null);
+  };
+
   const handleVerificationConfirm = (data) => {
     setVerificationData(data);
     setShowVerificationModal(false);
+    // After verification, show item discount modal if cart exists
+    if (cart.length > 0) {
+      setShowItemDiscountModal(true);
+    }
   };
 
   const handleVerificationCancel = () => {
     setShowVerificationModal(false);
     setDiscountType("none");
     setVerificationData(null);
-    setSelectedDiscountItem(null); // Reset selected item when verification is cancelled
+    setItemDiscountData(null);
   };
 
   return (
@@ -275,43 +301,6 @@ export default function PaymentModal({ subtotal = 0, vatAdjustedSubtotal = 0, to
             />
           </div>
 
-          {/* Select Item for Discount (PWD/Senior) */}
-          {(discountType === "senior" || discountType === "pwd") && verificationData && (
-            <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
-              <label className="block text-sm font-semibold text-gray-700 mb-3">
-                Select Item for {discountType === "senior" ? "Senior" : "PWD"} Discount (1 item only)
-              </label>
-              
-              {cart.length === 0 ? (
-                <p className="text-sm text-gray-500">No items in cart</p>
-              ) : (
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {cart.map((item, idx) => (
-                    <label key={idx} className="flex items-start p-3 hover:bg-purple-100 rounded cursor-pointer border border-transparent hover:border-purple-300 transition">
-                      <input
-                        type="radio"
-                        name="discountItem"
-                        checked={selectedDiscountItem === idx}
-                        onChange={() => setSelectedDiscountItem(idx)}
-                        className="form-radio mt-1"
-                      />
-                      <div className="ml-3 flex-1">
-                        <p className="text-sm font-semibold text-gray-800">{item.item}</p>
-                        <p className="text-xs text-gray-600">Qty: {item.qty} × ₱{item.price.toFixed(2)} = ₱{(item.qty * item.price).toFixed(2)}</p>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              )}
-
-              {selectedDiscountItem !== null && (
-                <p className="text-xs text-purple-600 mt-3 p-2 bg-purple-100 rounded">
-                  ✓ Selected: <span className="font-semibold">{cart[selectedDiscountItem]?.item}</span>
-                </p>
-              )}
-            </div>
-          )}
-
           {/* Change */}
           <div className="bg-green-50 p-4 rounded-lg">
             <div className="flex justify-between items-center">
@@ -359,12 +348,23 @@ export default function PaymentModal({ subtotal = 0, vatAdjustedSubtotal = 0, to
         </div>
       </div>
 
-      {/* Senior/PWD Verification Modal */}
+      {/* Senior/PWD Verification Modal (appears FIRST) */}
       {showVerificationModal && (
         <SeniorPWDVerificationModal
           discountType={discountType}
           onConfirm={handleVerificationConfirm}
           onCancel={handleVerificationCancel}
+        />
+      )}
+
+      {/* Senior/PWD Item Discount Modal (appears AFTER verification) */}
+      {showItemDiscountModal && (
+        <SeniorPWDItemDiscountModal
+          cart={cart}
+          discountType={discountType}
+          verificationData={verificationData}
+          onConfirm={handleItemDiscountConfirm}
+          onCancel={handleItemDiscountCancel}
         />
       )}
     </div>

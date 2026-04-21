@@ -2,9 +2,11 @@ import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertCircle, CheckCircle, ChevronRight, ChevronLeft } from "lucide-react";
 import API_BASE_URL from '../../../config/api';
+import { useAlert } from '../../../context/AlertContext';
 
 export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categories = [] }) {
   // Note: don't return before hooks — hooks must run consistently
+  const { success: showSuccess, error: showError } = useAlert();
 
   const [modalStep, setModalStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -19,11 +21,8 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
   });
   const [filePreview, setFilePreview] = useState(null);
 
-  // Ingredients from API with pagination (infinite scroll)
+  // Ingredients from API
   const [fetchedIngredients, setFetchedIngredients] = useState([]);
-  const [page, setPage] = useState(1);
-  const [limit] = useState(10);
-  const [hasMore, setHasMore] = useState(true);
   const [loadingIngredients, setLoadingIngredients] = useState(false);
   const [ingredientSearchTerm, setIngredientSearchTerm] = useState("");
   const [ingredientCategoryFilter, setIngredientCategoryFilter] = useState("");
@@ -36,8 +35,18 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
   const fetchCategories = async () => {
     try {
       const token = localStorage.getItem("token");
+      if (!token) {
+        console.warn("No token found for categories fetch");
+        return;
+      }
       const res = await fetch(API_CATEGORIES, { headers: { Authorization: `Bearer ${token}` } });
-      if (!res.ok) throw new Error("Failed to load categories");
+      if (!res.ok) {
+        if (res.status === 401) {
+          localStorage.removeItem("token");
+          console.warn("Session expired during categories fetch");
+        }
+        throw new Error("Failed to load categories");
+      }
       const data = await res.json();
       setLocalCategories(data || []);
     } catch (err) {
@@ -45,6 +54,17 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
       // silently fall back to prop categories if API fails
     }
   };
+
+  const roleId = Number(localStorage.getItem("role_id"));
+  const isSuperadmin = roleId === 3;
+  const totalSteps = isSuperadmin ? 1 : 2;
+
+  // Filter ingredients based on search term and category
+  const filteredIngredients = fetchedIngredients.filter((ing) => {
+    const matchesSearch = ing.name.toLowerCase().includes(ingredientSearchTerm.toLowerCase());
+    const matchesCategory = !ingredientCategoryFilter || ing.category === ingredientCategoryFilter;
+    return matchesSearch && matchesCategory;
+  });
 
   const productNameRef = useRef(null);
 
@@ -68,17 +88,15 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [modalStep, loading, newItem]);
 
-  // when entering step 2 (link ingredients) fetch first page
+  // when entering step 2 (link ingredients) fetch ingredients
   useEffect(() => {
-    if (isOpen && modalStep === 2) {
+    if (!isSuperadmin && isOpen && modalStep === 2) {
       // reset and fetch
       setFetchedIngredients([]);
-      setPage(1);
-      setHasMore(true);
-      fetchIngredients(1);
+      fetchIngredients();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, modalStep]);
+  }, [isOpen, modalStep, isSuperadmin]);
 
   // fetch categories from API when modal opens (always get fresh data from DB)
   useEffect(() => {
@@ -89,23 +107,10 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
   }, [isOpen]);
 
   // display fetched ingredients with search and category filters
-  const displayIngredients = fetchedIngredients.filter((ing) => {
-    const matchesSearch = ing.name.toLowerCase().includes(ingredientSearchTerm.toLowerCase());
-    const matchesCategory = !ingredientCategoryFilter || ing.category === ingredientCategoryFilter;
-    return matchesSearch && matchesCategory;
-  });
+  const displayIngredients = filteredIngredients;
 
   // display API categories (or fallback to prop if API fetch failed)
   const displayCategories = localCategories.length > 0 ? localCategories : categories || [];
-
-  const handleIngredientsScroll = (e) => {
-    const el = e.target;
-    if (!hasMore || loadingIngredients) return;
-    // near bottom
-    if (el.scrollHeight - el.scrollTop <= el.clientHeight + 40) {
-      fetchIngredients(page + 1);
-    }
-  };
 
   // File preview URL - SINGLE useEffect
   useEffect(() => {
@@ -126,21 +131,37 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
     setModalStep(1);
     setError("");
     setSuccess(false);
-    // reset ingredient pagination
+    // reset ingredient list
     setFetchedIngredients([]);
-    setPage(1);
-    setHasMore(true);
     setIngredientSearchTerm("");
     setIngredientCategoryFilter("");
     setIngredientCategories([]);
     onClose();
   };
 
-  const handleNextStep = () => {
+  const validateBasicInfo = () => {
+    if (!newItem.product_name.trim()) {
+      setError("Product name is required");
+      return false;
+    }
+    if (!newItem.category_id) {
+      setError("Please select a category");
+      return false;
+    }
+    if (!newItem.price || parseFloat(newItem.price) <= 0) {
+      setError("Price must be a positive number");
+      return false;
+    }
+    return true;
+  };
+
+  const handleNextStep = async () => {
     setError("");
-    if (!newItem.product_name.trim()) return setError("Product name is required");
-    if (!newItem.category_id) return setError("Please select a category");
-    if (!newItem.price || parseFloat(newItem.price) <= 0) return setError("Price must be a positive number");
+    if (!validateBasicInfo()) return;
+    if (isSuperadmin) {
+      await handleAdd();
+      return;
+    }
     setModalStep(2);
   };
 
@@ -150,8 +171,11 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
     setLoadingIngredients(true);
     try {
       const token = localStorage.getItem("token");
-      const API_INVENTORY = `${API_BASE_URL}/api/inventory`;
-      const res = await fetch(`${API_INVENTORY}/get-ingredients?page=${pageToLoad}&limit=${limit}`, {
+      if (!token) {
+        throw new Error("You are not logged in. Please log in again.");
+      }
+      const API_BRANCH_INGREDIENTS = `${API_BASE_URL}/api/branch-inventory`;
+      const res = await fetch(API_BRANCH_INGREDIENTS, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -170,42 +194,27 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
 
       if (!res.ok) {
         const msg = (data && data.message) || (data && data.error) || res.statusText || 'Failed to load ingredients';
+        if (res.status === 401) {
+          localStorage.removeItem("token");
+          throw new Error("Your session has expired. Please log in again.");
+        }
         throw new Error(msg);
       }
 
-      // backend returns paginated shape { data, total, currentPage, totalPages } or an array
-      let items = [];
-      let more = false;
-
-      if (Array.isArray(data)) {
-        items = data;
-        more = false;
-      } else if (data && data.data) {
-        items = data.data;
-        more = data.currentPage < data.totalPages;
-      }
-
-      // normalize to { id, name, category }
-      const normalized = items.map((i) => ({ 
-        id: i.inventory_id ?? i.id ?? i.item_id ?? i.itemId ?? i.id, 
-        name: i.item_name ?? i.name ?? i.itemName ?? '',
-        category: i.category_name ?? i.category ?? '' 
+      const normalized = data.map((i) => ({
+        id: i.inventory_id ?? i.ingredient_id ?? i.id,
+        name: i.item_name ?? i.name,
+        stock_units: i.stock_units ?? 0,
+        total_servings: i.total_servings ?? 0,
+        status: i.status ?? "unknown",
+        category: i.category_name ?? i.category ?? "",
       }));
 
-      if (pageToLoad === 1) {
-        setFetchedIngredients(normalized);
-      } else {
-        setFetchedIngredients((prev) => [...prev, ...normalized]);
-      }
-
+      setFetchedIngredients(normalized);
+      
       // Extract unique categories from ingredients
-      if (pageToLoad === 1) {
-        const uniqueCategories = [...new Set(normalized.map(item => item.category).filter(Boolean))];
-        setIngredientCategories(uniqueCategories);
-      }
-
-      setHasMore(more);
-      setPage(pageToLoad);
+      const uniqueCategories = [...new Set(normalized.map(item => item.category).filter(Boolean))];
+      setIngredientCategories(uniqueCategories);
     } catch (err) {
       console.error(err);
       setError(err.message || "Failed to load ingredients");
@@ -216,10 +225,20 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
 
   const handleAdd = async () => {
     setError("");
+    
+    // Validate that at least one ingredient is linked
+    if (!isSuperadmin && newItem.ingredients.length === 0) {
+      setError("Please select at least one inventory item before creating the menu item");
+      return;
+    }
+
     setLoading(true);
 
     try {
       const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("You are not logged in. Please log in again.");
+      }
       const API_MENU = `${API_BASE_URL}/api/menu`;
 
       // Build FormData for multipart/form-data (file + JSON fields)
@@ -251,12 +270,18 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
       }
 
       if (!res.ok) {
-        const msg = (data && data.message) || (data && data.error) || "Failed to create product";
+        const msg = (data && data.message) || (data && data.error) || res.statusText || "Failed to create product";
+        if (res.status === 401) {
+          // Clear invalid token and suggest login
+          localStorage.removeItem("token");
+          throw new Error("Your session has expired. Please log in again.");
+        }
         throw new Error(msg);
       }
 
       // Success: call parent callback and close modal
       onAddItem(newItem);
+      showSuccess("Menu Item Added", `${newItem.product_name} has been created successfully.`);
       setSuccess(true);
       setTimeout(() => {
         setSuccess(false);
@@ -264,7 +289,9 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
       }, 1000);
     } catch (err) {
       console.error(err);
-      setError(err.message || "Failed to add product");
+      const errorMsg = err.message || "Failed to add product";
+      setError(errorMsg);
+      showError("Failed to Add Menu Item", errorMsg);
     } finally {
       setLoading(false);
     }
@@ -293,13 +320,13 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
               {modalStep === 1 ? "Basic Information" : "Link Ingredients"}
             </h2>
             <span className="text-sm font-medium text-gray-500">
-              Step {modalStep} of 2
+              Step {modalStep} of {totalSteps}
             </span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div
               className="bg-green-600 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${(modalStep / 2) * 100}%` }}
+              style={{ width: `${(modalStep / totalSteps) * 100}%` }}
             />
           </div>
         </div>
@@ -425,7 +452,15 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
                     </>
                   ) : (
                     <>
-                      Next <ChevronRight size={18} />
+                      {isSuperadmin ? (
+                        <>
+                          <CheckCircle size={18} /> Add Product
+                        </>
+                      ) : (
+                        <>
+                          Next <ChevronRight size={18} />
+                        </>
+                      )}
                     </>
                   )}
                 </button>
@@ -474,7 +509,7 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
                 </div>
               </div>
 
-              <div onScroll={handleIngredientsScroll} className="max-h-72 overflow-y-auto space-y-3 border border-gray-200 rounded-2xl p-4 bg-gray-50">
+              <div className="max-h-72 overflow-y-auto space-y-3 border border-gray-200 rounded-2xl p-4 bg-gray-50">
                 {displayIngredients.length > 0 ? (
                   displayIngredients.map((ing) => {
                     const selectedIng = newItem.ingredients.find((i) => i.id === ing.id);
@@ -485,18 +520,16 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
                         <input
                           type="checkbox"
                           checked={isSelected}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              // Add ingredient with quantity 1
-                              setNewItem({
-                                ...newItem,
-                                ingredients: [...newItem.ingredients, { id: ing.id, quantity: 1 }]
-                              });
-                            } else {
-                              // Remove ingredient
+                          onChange={() => {
+                            if (isSelected) {
                               setNewItem({
                                 ...newItem,
                                 ingredients: newItem.ingredients.filter(i => i.id !== ing.id)
+                              });
+                            } else {
+                              setNewItem({
+                                ...newItem,
+                                ingredients: [...newItem.ingredients, { id: ing.id, quantity: 1 }]
                               });
                             }
                           }}
@@ -524,14 +557,14 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
                           </div>
                         )}
                       </div>
-                    )
+                    );
                   })
                 ) : (
                   <p className="text-sm text-gray-500 text-center py-8">No ingredients available</p>
                 )}
 
                 {loadingIngredients && (
-                  <div className="w-full text-center py-3 text-sm text-gray-600">Loading...</div>
+                  <div className="w-full text-center py-3 text-sm text-gray-600">Loading branch inventory...</div>
                 )}
               </div>
 
@@ -547,7 +580,7 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
                 <button onClick={() => setModalStep(1)} disabled={loading} className="flex-1 bg-gray-100 hover:bg-gray-200 py-3 rounded-2xl font-medium flex items-center justify-center gap-2 disabled:opacity-50">
                   <ChevronLeft size={18} /> Back
                 </button>
-                <button onClick={handleAdd} disabled={loading} className="flex-1 bg-green-600 hover:bg-green-700 py-3 rounded-2xl text-white font-medium flex items-center justify-center gap-2 disabled:opacity-70">
+                <button onClick={handleAdd} disabled={loading || newItem.ingredients.length === 0} className="flex-1 bg-green-600 hover:bg-green-700 py-3 rounded-2xl text-white font-medium flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed" title={newItem.ingredients.length === 0 ? "Select at least one inventory item" : ""}>
                   {loading ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

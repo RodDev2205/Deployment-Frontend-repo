@@ -182,7 +182,7 @@ export default function Records () {
                                 <td className="px-4 py-3">{record.branch_name || 'N/A'}</td>
                                 <td className="px-4 py-3">₱ {Number(record.total_amount).toFixed(2)}</td>
                                 <td className="px-4 py-3">₱ {Number(record.amount_paid).toFixed(2)}</td>
-                                <td className="px-4 py-3">₱ {Number(record.discount || 0).toFixed(2)}</td>
+                                <td className="px-4 py-3">₱ {Number(record.discount_amount || 0).toFixed(2)}</td>
                                 <td className="px-4 py-3">₱ {change.toFixed(2)}</td>
                                 <td className="px-4 py-3 capitalize">
                                     {(() => {
