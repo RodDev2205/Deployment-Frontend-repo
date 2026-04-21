@@ -14,7 +14,6 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
     product_name: "",
     category_id: "",
     price: "",
-    vat_type: "vat",
     file: null,
     ingredients: [],
   });
@@ -26,6 +25,9 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
   const [limit] = useState(10);
   const [hasMore, setHasMore] = useState(true);
   const [loadingIngredients, setLoadingIngredients] = useState(false);
+  const [ingredientSearchTerm, setIngredientSearchTerm] = useState("");
+  const [ingredientCategoryFilter, setIngredientCategoryFilter] = useState("");
+  const [ingredientCategories, setIngredientCategories] = useState([]);
 
   // Categories from API (always fetch for fresh database data)
   const [localCategories, setLocalCategories] = useState([]);
@@ -86,8 +88,12 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
-  // display fetched ingredients (always from API)
-  const displayIngredients = fetchedIngredients;
+  // display fetched ingredients with search and category filters
+  const displayIngredients = fetchedIngredients.filter((ing) => {
+    const matchesSearch = ing.name.toLowerCase().includes(ingredientSearchTerm.toLowerCase());
+    const matchesCategory = !ingredientCategoryFilter || ing.category === ingredientCategoryFilter;
+    return matchesSearch && matchesCategory;
+  });
 
   // display API categories (or fallback to prop if API fetch failed)
   const displayCategories = localCategories.length > 0 ? localCategories : categories || [];
@@ -124,6 +130,9 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
     setFetchedIngredients([]);
     setPage(1);
     setHasMore(true);
+    setIngredientSearchTerm("");
+    setIngredientCategoryFilter("");
+    setIngredientCategories([]);
     onClose();
   };
 
@@ -176,13 +185,23 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
         more = data.currentPage < data.totalPages;
       }
 
-      // normalize to { id, name }
-      const normalized = items.map((i) => ({ id: i.inventory_id ?? i.id ?? i.item_id ?? i.itemId ?? i.id, name: i.item_name ?? i.name ?? i.itemName ?? '' }));
+      // normalize to { id, name, category }
+      const normalized = items.map((i) => ({ 
+        id: i.inventory_id ?? i.id ?? i.item_id ?? i.itemId ?? i.id, 
+        name: i.item_name ?? i.name ?? i.itemName ?? '',
+        category: i.category_name ?? i.category ?? '' 
+      }));
 
       if (pageToLoad === 1) {
         setFetchedIngredients(normalized);
       } else {
         setFetchedIngredients((prev) => [...prev, ...normalized]);
+      }
+
+      // Extract unique categories from ingredients
+      if (pageToLoad === 1) {
+        const uniqueCategories = [...new Set(normalized.map(item => item.category).filter(Boolean))];
+        setIngredientCategories(uniqueCategories);
       }
 
       setHasMore(more);
@@ -208,7 +227,7 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
       formData.append("product_name", newItem.product_name.trim());
       formData.append("category_id", newItem.category_id);
       formData.append("price", parseFloat(newItem.price));
-      formData.append("vat_type", newItem.vat_type);
+      formData.append("vat_type", "vat");
       if (newItem.file) {
         formData.append("image", newItem.file);
       }
@@ -375,37 +394,6 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
                 />
               </div>
 
-              {/* VAT Type */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">VAT Type *</label>
-                <div className="flex gap-6">
-                  <label className="inline-flex items-center">
-                    <input
-                      type="radio"
-                      name="vat_type"
-                      value="vat"
-                      checked={newItem.vat_type === "vat"}
-                      onChange={(e) => setNewItem({ ...newItem, vat_type: e.target.value })}
-                      disabled={loading}
-                      className="form-radio"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">VATable</span>
-                  </label>
-                  <label className="inline-flex items-center">
-                    <input
-                      type="radio"
-                      name="vat_type"
-                      value="non-vat"
-                      checked={newItem.vat_type === "non-vat"}
-                      onChange={(e) => setNewItem({ ...newItem, vat_type: e.target.value })}
-                      disabled={loading}
-                      className="form-radio"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">Non-VATable</span>
-                  </label>
-                </div>
-              </div>
-
               {/* Image Upload */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Product Image</label>
@@ -459,43 +447,82 @@ export default function AddMenuItemModal({ isOpen, onClose, onAddItem, categorie
                 Select ingredients for <span className="font-semibold text-gray-800">{newItem.product_name}</span>
               </p>
 
+              {/* Search and Category Filter */}
+              <div className="flex flex-col md:flex-row gap-3">
+                <div className="flex-1">
+                  <input
+                    type="text"
+                    placeholder="Search ingredients..."
+                    value={ingredientSearchTerm}
+                    onChange={(e) => setIngredientSearchTerm(e.target.value)}
+                    className="w-full border border-gray-200 p-3 rounded-2xl focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none transition-all text-sm"
+                  />
+                </div>
+                <div className="flex-1">
+                  <select
+                    value={ingredientCategoryFilter}
+                    onChange={(e) => setIngredientCategoryFilter(e.target.value)}
+                    className="w-full border border-gray-200 p-3 rounded-2xl focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none transition-all text-sm"
+                  >
+                    <option value="">All Categories</option>
+                    {ingredientCategories.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               <div onScroll={handleIngredientsScroll} className="max-h-72 overflow-y-auto space-y-3 border border-gray-200 rounded-2xl p-4 bg-gray-50">
                 {displayIngredients.length > 0 ? (
                   displayIngredients.map((ing) => {
-                    const ingQty = newItem.ingredients.find((i) => i.id === ing.id)?.quantity || "";
+                    const selectedIng = newItem.ingredients.find((i) => i.id === ing.id);
+                    const isSelected = !!selectedIng;
+                    const ingQty = selectedIng?.quantity || 1;
                     return (
-                      <div key={ing.id} className="flex items-center gap-4 p-3 bg-white rounded-xl border border-gray-100 hover:border-green-300 transition">
-                        <span className="font-medium text-gray-700 flex-1">{ing.name}</span>
+                      <div key={ing.id} className={`flex items-center gap-4 p-3 rounded-xl border transition ${isSelected ? 'bg-green-50 border-green-300' : 'bg-white border-gray-100 hover:border-green-300'}`}>
                         <input
-                          type="number"
-                          placeholder="Qty"
-                          disabled={loading}
-                          className="border border-gray-200 p-2 rounded-lg w-20 focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none"
-                          value={ingQty}
+                          type="checkbox"
+                          checked={isSelected}
                           onChange={(e) => {
-                            const qty = parseInt(e.target.value) || 0;
-                            if (qty === 0) {
+                            if (e.target.checked) {
+                              // Add ingredient with quantity 1
+                              setNewItem({
+                                ...newItem,
+                                ingredients: [...newItem.ingredients, { id: ing.id, quantity: 1 }]
+                              });
+                            } else {
+                              // Remove ingredient
                               setNewItem({
                                 ...newItem,
                                 ingredients: newItem.ingredients.filter(i => i.id !== ing.id)
                               });
-                            } else {
-                              const exists = newItem.ingredients.find(i => i.id === ing.id);
-                              if (exists) {
+                            }
+                          }}
+                          disabled={loading}
+                          className="w-5 h-5 cursor-pointer accent-green-600"
+                        />
+                        <span className={`font-medium flex-1 ${isSelected ? 'text-green-800' : 'text-gray-700'}`}>{ing.name}</span>
+                        {isSelected && (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min="1"
+                              disabled={loading}
+                              className="border border-gray-300 p-2 rounded-lg w-20 focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none"
+                              value={ingQty}
+                              onChange={(e) => {
+                                const qty = parseInt(e.target.value) || 1;
                                 setNewItem({
                                   ...newItem,
                                   ingredients: newItem.ingredients.map(i => i.id === ing.id ? {...i, quantity: qty} : i)
                                 });
-                              } else {
-                                setNewItem({
-                                  ...newItem,
-                                  ingredients: [...newItem.ingredients, { id: ing.id, quantity: qty }]
-                                });
-                              }
-                            }
-                          }}
-                        />
-                        <span className="text-sm text-gray-500 w-12">unit</span>
+                              }}
+                            />
+                            <span className="text-sm text-gray-500 w-12">unit</span>
+                          </div>
+                        )}
                       </div>
                     )
                   })

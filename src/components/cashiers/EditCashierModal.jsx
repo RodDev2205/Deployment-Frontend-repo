@@ -4,6 +4,7 @@ export default function EditCashierModal({ cashier, onClose, onSave }) {
     const [formData, setFormData] = useState({ 
         ...cashier,
         first_name: cashier.first_name || '',
+        middle_name: cashier.middle_name || '',
         last_name: cashier.last_name || '',
         username: cashier.username || '',
         contact_number: cashier.contact_number || ''
@@ -13,6 +14,7 @@ export default function EditCashierModal({ cashier, onClose, onSave }) {
     const handleSubmit = (e) => {
         e.preventDefault();
         onSave(formData);
+        onClose();
     };
 
     return (
@@ -21,6 +23,7 @@ export default function EditCashierModal({ cashier, onClose, onSave }) {
                 <h3 className="text-xl font-bold mb-4">Edit Cashier Details</h3>
                 <form className="space-y-3" onSubmit={handleSubmit}>
                     <input type="text" name="first_name" placeholder="First Name" value={formData.first_name} onChange={handleChange} className="w-full p-3 border rounded-lg bg-white/40 backdrop-blur-sm" required />
+                    <input type="text" name="middle_name" placeholder="Middle Initial" value={formData.middle_name} onChange={handleChange} className="w-full p-3 border rounded-lg bg-white/40 backdrop-blur-sm" />
                     <input type="text" name="last_name" placeholder="Last Name" value={formData.last_name} onChange={handleChange} className="w-full p-3 border rounded-lg bg-white/40 backdrop-blur-sm" required />
                     <input type="text" name="username" placeholder="Username" value={formData.username} onChange={handleChange} className="w-full p-3 border rounded-lg bg-white/40 backdrop-blur-sm" required />
                     <input type="tel" name="contact_number" placeholder="Contact Number" value={formData.contact_number} onChange={handleChange} className="w-full p-3 border rounded-lg bg-white/40 backdrop-blur-sm" />

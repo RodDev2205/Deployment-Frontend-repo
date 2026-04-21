@@ -25,6 +25,9 @@ export default function EditMenuItemModal({ isOpen, onClose, onSaved, item, cate
   const [limit] = useState(10);
   const [hasMore, setHasMore] = useState(true);
   const [loadingIngredients, setLoadingIngredients] = useState(false);
+  const [ingredientSearchTerm, setIngredientSearchTerm] = useState("");
+  const [ingredientCategoryFilter, setIngredientCategoryFilter] = useState("");
+  const [ingredientCategories, setIngredientCategories] = useState([]);
 
   const API_INVENTORY = `${API_BASE_URL}/api/inventory`;
 
@@ -55,6 +58,9 @@ export default function EditMenuItemModal({ isOpen, onClose, onSaved, item, cate
       setFetchedIngredients([]);
       setPage(1);
       setHasMore(true);
+      setIngredientSearchTerm("");
+      setIngredientCategoryFilter("");
+      setIngredientCategories([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, item]);
@@ -70,8 +76,19 @@ export default function EditMenuItemModal({ isOpen, onClose, onSaved, item, cate
       });
       const data = await res.json();
       const items = Array.isArray(data) ? data : data.data || [];
-      const normalized = items.map((i) => ({ id: i.inventory_id ?? i.id, name: i.item_name ?? i.name }));
+      const normalized = items.map((i) => ({ 
+        id: i.inventory_id ?? i.id, 
+        name: i.item_name ?? i.name,
+        category: i.category_name ?? i.category ?? ''
+      }));
       setFetchedIngredients((prev) => (pageToLoad === 1 ? normalized : [...prev, ...normalized]));
+      
+      // Extract unique categories from ingredients
+      if (pageToLoad === 1) {
+        const uniqueCategories = [...new Set(normalized.map(item => item.category).filter(Boolean))];
+        setIngredientCategories(uniqueCategories);
+      }
+      
       setHasMore(data.totalPages ? pageToLoad < data.totalPages : false);
       setPage(pageToLoad);
     } catch (err) {
@@ -117,6 +134,13 @@ export default function EditMenuItemModal({ isOpen, onClose, onSaved, item, cate
     if (!hasMore || loadingIngredients) return;
     if (el.scrollHeight - el.scrollTop <= el.clientHeight + 40) fetchIngredients(page + 1);
   };
+
+  // display fetched ingredients with search and category filters
+  const displayIngredients = fetchedIngredients.filter((ing) => {
+    const matchesSearch = ing.name.toLowerCase().includes(ingredientSearchTerm.toLowerCase());
+    const matchesCategory = !ingredientCategoryFilter || ing.category === ingredientCategoryFilter;
+    return matchesSearch && matchesCategory;
+  });
 
   const handleToggleIngredient = (inv) => {
     const exists = newItem.ingredients.find((i) => i.id === inv.id);
@@ -230,19 +254,63 @@ export default function EditMenuItemModal({ isOpen, onClose, onSaved, item, cate
 
           {modalStep === 2 && (
             <div className="space-y-4">
-              <p className="text-sm">Select linked inventory items and set quantity</p>
-              <div onScroll={handleIngredientsScroll} className="max-h-72 overflow-y-auto border rounded p-3 bg-gray-50">
-                {fetchedIngredients.length > 0 ? (
-                  fetchedIngredients.map((inv) => {
-                    const sel = newItem.ingredients.find((i) => i.id === inv.id);
+              <p className="text-sm text-gray-600">
+                Select linked inventory items for <span className="font-semibold text-gray-800">{newItem.product_name}</span>
+              </p>
+
+              {/* Search and Category Filter */}
+              <div className="flex flex-col md:flex-row gap-3">
+                <div className="flex-1">
+                  <input
+                    type="text"
+                    placeholder="Search ingredients..."
+                    value={ingredientSearchTerm}
+                    onChange={(e) => setIngredientSearchTerm(e.target.value)}
+                    className="w-full border border-gray-200 p-3 rounded-2xl focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none transition-all text-sm"
+                  />
+                </div>
+                <div className="flex-1">
+                  <select
+                    value={ingredientCategoryFilter}
+                    onChange={(e) => setIngredientCategoryFilter(e.target.value)}
+                    className="w-full border border-gray-200 p-3 rounded-2xl focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none transition-all text-sm"
+                  >
+                    <option value="">All Categories</option>
+                    {ingredientCategories.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div onScroll={handleIngredientsScroll} className="max-h-72 overflow-y-auto space-y-3 border border-gray-200 rounded-2xl p-4 bg-gray-50">
+                {displayIngredients.length > 0 ? (
+                  displayIngredients.map((inv) => {
+                    const selectedIng = newItem.ingredients.find((i) => i.id === inv.id);
+                    const isSelected = !!selectedIng;
+                    const ingQty = selectedIng?.quantity || 1;
                     return (
-                      <div key={inv.id} className="flex items-center justify-between py-2">
-                        <div className="flex items-center gap-3">
-                          <input type="checkbox" checked={!!sel} onChange={() => handleToggleIngredient(inv)} />
-                          <span>{inv.name}</span>
-                        </div>
-                        {sel && (
-                          <input type="number" min="0" value={sel.quantity} onChange={(e) => setIngredientQuantity(inv.id, Number(e.target.value))} className="w-20 border p-1 rounded" />
+                      <div key={inv.id} className={`flex items-center gap-4 p-3 rounded-xl border transition ${isSelected ? 'bg-green-50 border-green-300' : 'bg-white border-gray-100 hover:border-green-300'}`}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleToggleIngredient(inv)}
+                          className="w-5 h-5 cursor-pointer accent-green-600"
+                        />
+                        <span className={`font-medium flex-1 ${isSelected ? 'text-green-800' : 'text-gray-700'}`}>{inv.name}</span>
+                        {isSelected && (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min="1"
+                              value={ingQty}
+                              onChange={(e) => setIngredientQuantity(inv.id, Number(e.target.value) || 1)}
+                              className="border border-gray-300 p-2 rounded-lg w-20 focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none"
+                            />
+                            <span className="text-sm text-gray-500 w-12">unit</span>
+                          </div>
                         )}
                       </div>
                     );
@@ -253,9 +321,16 @@ export default function EditMenuItemModal({ isOpen, onClose, onSaved, item, cate
                 {loadingIngredients && <div className="text-center py-2 text-sm">Loading...</div>}
               </div>
 
+              {/* Selected Count */}
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-2xl">
+                <p className="text-sm text-blue-800 font-medium">
+                  {newItem.ingredients.length} ingredient{newItem.ingredients.length !== 1 ? "s" : ""} selected
+                </p>
+              </div>
+
               <div className="flex gap-3 pt-4">
-                <button onClick={() => setModalStep(1)} className="bg-gray-600 text-white py-2 px-4 rounded">Back</button>
-                <button onClick={handleSave} className="flex-1 bg-green-600 text-white py-2 rounded">Save</button>
+                <button onClick={() => setModalStep(1)} className="flex-1 bg-gray-100 hover:bg-gray-200 py-2 rounded-2xl font-medium">Back</button>
+                <button onClick={handleSave} className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-2xl font-medium">Save</button>
               </div>
             </div>
           )}

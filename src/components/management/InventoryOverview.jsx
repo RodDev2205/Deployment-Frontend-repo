@@ -97,7 +97,7 @@ const InventoryOverview = () => {
       </div>
 
       <button 
-        onClick={() => navigate('/superadmin/menu-inventory', { state: { activeTab: 'inventory' } })}
+        onClick={() => navigate('/superadmin/inventory')}
         className="mt-6 text-green-700 hover:text-green-800 text-sm font-medium"
       >
         Go to Inventory Page to view status

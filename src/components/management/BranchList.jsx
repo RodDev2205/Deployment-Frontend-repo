@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import API_BASE_URL from '../../config/api';
-import { Store, Eye, FilePenLine, Power, PowerOff } from "lucide-react";
+import { Store, Eye, FilePenLine, Power, PowerOff, Search, X } from "lucide-react";
 import AddBranchModal from "./AddBranches";
 import ViewBranchModal from "./ViewBranchModal";
 import EditBranchModal from "./EditBranchModal";
+import AlertDialog from "../common/AlertDialog";
 
 export default function BranchList() {
   const [branches, setBranches] = useState([]);
@@ -13,9 +14,14 @@ export default function BranchList() {
   const [isAddBranchModalOpen, setIsAddBranchModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const [branchToToggle, setBranchToToggle] = useState(null);
+  const [isSuccessDialogOpen, setIsSuccessDialogOpen] = useState(false);
+  const [successMessage, setSuccessMessage] = useState(null);
 
   const [selectedBranch, setSelectedBranch] = useState(null);
   const [userRole, setUserRole] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   //  FETCH WITH FULL ERROR HANDLING
   const fetchBranches = async () => {
@@ -102,12 +108,25 @@ export default function BranchList() {
         throw new Error(data.message || "Failed to toggle branch status");
       }
 
-      // Refresh branches list
+      // Show success dialog
+      const branchName = branchToToggle?.name || branchToToggle?.branchName || 'Branch';
+      const newStatus = branchToToggle?.status === 'active' ? 'deactivated' : 'activated';
+      setSuccessMessage(`${branchName} has been ${newStatus} successfully`);
+      setIsSuccessDialogOpen(true);
+
+      // Refresh branches list after dialog closes
       fetchBranches();
+      setIsConfirmDialogOpen(false);
+      setBranchToToggle(null);
     } catch (err) {
       console.error("Toggle branch status error:", err);
       setError(err.message || "Failed to toggle branch status");
     }
+  };
+
+  const showConfirmationDialog = (branch) => {
+    setBranchToToggle(branch);
+    setIsConfirmDialogOpen(true);
   };
 
   //  SAFE TIME FORMATTER
@@ -148,19 +167,58 @@ export default function BranchList() {
     return "No contact person assigned";
   };
 
+  // Filter branches based on search term
+  const filteredBranches = branches.filter((branch) => {
+    const searchLower = searchTerm.toLowerCase();
+    const branchName = (branch.name || branch.branchName || "").toLowerCase();
+    const branchLocation = (branch.locationText || branch.address || "").toLowerCase();
+    const contactPerson = formatContactPerson(branch).toLowerCase();
+    
+    return (
+      branchName.includes(searchLower) ||
+      branchLocation.includes(searchLower) ||
+      contactPerson.includes(searchLower)
+    );
+  });
+
   return (
     <div>
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex gap-4 items-center justify-between">
         <h2 className="text-xl font-semibold text-gray-800">Branch List</h2>
 
-        <button
-          onClick={() => setIsAddBranchModalOpen(true)}
-          className="flex items-center rounded-lg bg-green-600 px-4 py-2 font-medium text-white hover:bg-green-700"
-        >
-          <Store className="mr-2 h-4 w-4" />
-          Add New Branch
-        </button>
+        <div className="flex gap-4 items-center">
+          {/* Search Bar */}
+          <div className="relative w-80">
+            <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+              <Search size={18} />
+            </div>
+            <input
+              type="text"
+              placeholder="Search branches..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-green-600 focus:ring-2 focus:ring-green-200 transition"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X size={18} />
+              </button>
+            )}
+          </div>
+
+          {/* Add New Branch Button */}
+          <button
+            onClick={() => setIsAddBranchModalOpen(true)}
+            className="flex items-center rounded-lg bg-green-600 px-6 py-2.5 font-medium text-white hover:bg-green-700"
+          >
+            <Store className="mr-2 h-4 w-4" />
+            Add New Branch
+          </button>
+        </div>
       </div>
 
       {/*  ERROR DISPLAY */}
@@ -187,7 +245,13 @@ export default function BranchList() {
             </div>
           )}
 
-          {branches.map((branch) => (
+          {filteredBranches.length === 0 && branches.length > 0 && !error && (
+            <div className="rounded-lg border border-dashed border-gray-300 bg-white p-8 text-center text-gray-500">
+              No branches match your search.
+            </div>
+          )}
+
+          {filteredBranches.map((branch) => (
             <div
               key={branch.branch_id || Math.random()}
               className="rounded-lg border border-gray-200 bg-white p-6 transition-shadow hover:shadow-md"
@@ -249,7 +313,7 @@ export default function BranchList() {
                   {/* TOGGLE STATUS - Only for Superadmin (role_id = 3) */}
                   {userRole === 3 && (
                     <button
-                      onClick={() => handleToggleBranchStatus(branch.branch_id)}
+                      onClick={() => showConfirmationDialog(branch)}
                       className={`rounded border p-2 flex items-center justify-center ${
                         branch.status === 'active'
                           ? 'border-red-600 text-red-600 hover:bg-red-50'
@@ -292,6 +356,61 @@ export default function BranchList() {
         onClose={() => setIsAddBranchModalOpen(false)}
         onSubmit={handleCreateBranch}
       />
+
+      {/* Success Dialog */}
+      <AlertDialog
+        isOpen={isSuccessDialogOpen}
+        type="success"
+        title="Success"
+        message={successMessage}
+        onClose={() => setIsSuccessDialogOpen(false)}
+        confirmText="OK"
+        showConfirmButton={true}
+        showCancelButton={false}
+      />
+
+      {/* Confirmation Dialog */}
+      {isConfirmDialogOpen && branchToToggle && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-sm shadow-xl">
+            <div className="mb-4">
+              <h2 className="text-lg font-bold text-gray-800">
+                {branchToToggle.status === 'active' ? 'Deactivate Branch' : 'Activate Branch'}
+              </h2>
+              <p className="text-sm text-gray-600 mt-2">
+                Are you sure you want to {branchToToggle.status === 'active' ? 'deactivate' : 'activate'} <span className="font-semibold">{branchToToggle.name || branchToToggle.branchName}</span>?
+              </p>
+              {branchToToggle.status === 'active' && (
+                <p className="text-sm text-red-600 mt-3 bg-red-50 p-2 rounded">
+                  ⚠️ Deactivating this branch will prevent it from processing transactions.
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setIsConfirmDialogOpen(false);
+                  setBranchToToggle(null);
+                }}
+                className="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleToggleBranchStatus(branchToToggle.branch_id)}
+                className={`flex-1 px-4 py-2 rounded-lg text-white font-medium transition ${
+                  branchToToggle.status === 'active'
+                    ? 'bg-red-600 hover:bg-red-700'
+                    : 'bg-green-600 hover:bg-green-700'
+                }`}
+              >
+                {branchToToggle.status === 'active' ? 'Deactivate' : 'Activate'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

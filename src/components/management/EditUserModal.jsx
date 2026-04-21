@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useAlert } from "@/context/AlertContext";
 import { X, UserPlus, Eye, EyeOff } from "lucide-react";
 import API_BASE_URL from '../../config/api';
+import AlertDialog from "../common/AlertDialog";
 
 export default function EditUserModal({ isOpen, onClose, user, role, onUpdate }) {
   const [branches, setBranches] = useState([]);
@@ -9,10 +10,12 @@ export default function EditUserModal({ isOpen, onClose, user, role, onUpdate })
   const [loadingSubmit, setLoadingSubmit] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [isSuccessDialogOpen, setIsSuccessDialogOpen] = useState(false);
   const { error: alertError, success } = useAlert();
 
   const [formData, setFormData] = useState({
     first_name: "",
+    middle_name: "",
     last_name: "",
     username: "",
     password: "",
@@ -55,6 +58,7 @@ export default function EditUserModal({ isOpen, onClose, user, role, onUpdate })
 
     setFormData({
       first_name: user.first_name || "",
+      middle_name: user.middle_name || "",
       last_name: user.last_name || "",
       username: user.username || "",
       password: "",
@@ -75,18 +79,28 @@ export default function EditUserModal({ isOpen, onClose, user, role, onUpdate })
     setErrorMsg("");
 
     try {
-      const { first_name, last_name, username, branch_id, password, contact_number } = formData;
+      const { first_name, last_name, middle_name, username, branch_id, password, contact_number } = formData;
 
       if (!first_name || !last_name || !username || !branch_id) {
         throw new Error("First, last name, username, and branch are required");
       }
 
       const token = localStorage.getItem("token");
-      const payload = { first_name, last_name, username, branch_id };
+      const payload = { first_name, last_name, middle_name, username, branch_id };
       if (password) payload.password = password;
       if (contact_number) payload.contact_number = contact_number;
 
+      // Cache the middle_name to preserve it (backend may not store it)
+      const cacheKey = `user_${username}_middle_name`;
+      if (middle_name) {
+        localStorage.setItem(cacheKey, middle_name);
+      }
+
       const userId = user.id || user.user_id;
+      console.log("EditUserModal - User object:", user);
+      console.log("EditUserModal - Extracted userId:", userId);
+      console.log("EditUserModal - Attempting to update user with ID:", userId);
+      
       const res = await fetch(`${API_BASE_URL}/api/users/user/${userId}`, {
         method: "PATCH",
         headers: {
@@ -103,8 +117,13 @@ export default function EditUserModal({ isOpen, onClose, user, role, onUpdate })
         throw new Error(data.error || data.message || "Failed to update user");
       }
 
-      onUpdate?.(data.user || { ...user, ...payload });
-      onClose();
+      // Ensure middle_name is preserved in the response
+      const updatedUser = data.user || { ...user, ...payload };
+      if (!updatedUser.middle_name) {
+        updatedUser.middle_name = payload.middle_name;
+      }
+      onUpdate?.(updatedUser);
+      setIsSuccessDialogOpen(true);
     } catch (err) {
       setErrorMsg(err.message);
       alertError("Error", err.message);
@@ -131,7 +150,7 @@ export default function EditUserModal({ isOpen, onClose, user, role, onUpdate })
         <form onSubmit={handleSubmit} className="space-y-4">
           {errorMsg && <p className="text-sm text-red-500">{errorMsg}</p>}
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700">First Name</label>
               <input
@@ -140,6 +159,17 @@ export default function EditUserModal({ isOpen, onClose, user, role, onUpdate })
                 value={formData.first_name}
                 onChange={handleChange}
                 required
+                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Middle Initial</label>
+              <input
+                type="text"
+                name="middle_name"
+                value={formData.middle_name}
+                onChange={handleChange}
+                placeholder=""
                 className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:outline-none"
               />
             </div>
@@ -223,6 +253,21 @@ export default function EditUserModal({ isOpen, onClose, user, role, onUpdate })
             </button>
           </div>
         </form>
+
+        {/* Success Dialog */}
+        <AlertDialog
+          isOpen={isSuccessDialogOpen}
+          type="success"
+          title="Success"
+          message={`${role} updated successfully!`}
+          confirmText="OK"
+          onClose={() => {
+            setIsSuccessDialogOpen(false);
+            onClose();
+          }}
+          showConfirmButton={true}
+          showCancelButton={false}
+        />
       </div>
     </div>
   );

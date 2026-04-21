@@ -159,23 +159,31 @@ export default function Records () {
                     <thead>
                         <tr className="bg-gray-200 text-left text-sm text-gray-600 uppercase sticky top-0">
                             <th className="px-4 py-3">Time</th>
-                            <th className="px-4 py-3">Transaction #</th>
-                            <th className="px-4 py-3">Total</th>
-                            <th className="px-4 py-3">Paid</th>
+                            <th className="px-4 py-3">Transaction ID</th>
+                            <th className="px-4 py-3">Branch</th>
+                            <th className="px-4 py-3">Sales</th>
+                            <th className="px-4 py-3">Amount Paid</th>
+                            <th className="px-4 py-3">Discount</th>
+                            <th className="px-4 py-3">Change</th>
                             <th className="px-4 py-3">Status</th>
-                            <th className="px-4 py-3">Action</th>
+                            <th className="px-4 py-3">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="text-sm text-gray-700">
-                        {currentRecords.map((record, idx) => (
+                        {currentRecords.map((record, idx) => {
+                            const change = Number(record.amount_paid) - Number(record.total_amount);
+                            return (
                             <tr
                                 key={record.transaction_id}
                                 className={`border-b ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-gray-100`}
                             >
                                 <td className="px-4 py-3">{formatTime(record.created_at)}</td>
                                 <td className="px-4 py-3 font-medium text-gray-800">{record.transaction_number}</td>
+                                <td className="px-4 py-3">{record.branch_name || 'N/A'}</td>
                                 <td className="px-4 py-3">₱ {Number(record.total_amount).toFixed(2)}</td>
                                 <td className="px-4 py-3">₱ {Number(record.amount_paid).toFixed(2)}</td>
+                                <td className="px-4 py-3">₱ {Number(record.discount || 0).toFixed(2)}</td>
+                                <td className="px-4 py-3">₱ {change.toFixed(2)}</td>
                                 <td className="px-4 py-3 capitalize">
                                     {(() => {
                                         const statusLower = record.status ? record.status.toLowerCase() : '';
@@ -206,10 +214,11 @@ export default function Records () {
                                     </button>
                                 </td>
                             </tr>
-                        ))}
+                            );
+                        })}
                         {currentRecords.length === 0 && (
                             <tr>
-                                <td colSpan="6" className="text-center py-6 text-gray-500">
+                                <td colSpan="9" className="text-center py-6 text-gray-500">
                                     No records found.
                                 </td>
                             </tr>

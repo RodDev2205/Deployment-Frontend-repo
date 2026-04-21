@@ -1,18 +1,18 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import MenuListTab from "../components/management/tabs/MenuListTab";
+import InventoryTab from "../components/management/tabs/InventoryTab";
 
-export default function MenuListPage() {
+export default function InventoryPage() {
   const location = useLocation();
 
   return (
     <div className="p-6">
       <h1 className="text-3xl font-bold mb-6">
-        Menu Management
+        Inventory Management
       </h1>
 
       <div className="bg-white rounded-xl shadow-sm p-6">
-        <MenuListTab />
+        <InventoryTab />
       </div>
     </div>
   );

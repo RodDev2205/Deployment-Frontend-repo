@@ -2,7 +2,7 @@ import React, { useState, useMemo } from "react";
 import { useAlert } from "@/context/AlertContext";
 import SeniorPWDVerificationModal from "./SeniorPWDVerificationModal";
 
-export default function PaymentModal({ subtotal = 0, vatAdjustedSubtotal = 0, totalAmount = 0, onConfirm, onClose }) {
+export default function PaymentModal({ subtotal = 0, vatAdjustedSubtotal = 0, totalAmount = 0, cart = [], onConfirm, onClose }) {
   const { error: alertError } = useAlert();
 
   const [amountPaid, setAmountPaid] = useState("");
@@ -11,6 +11,7 @@ export default function PaymentModal({ subtotal = 0, vatAdjustedSubtotal = 0, to
   const [orderType, setOrderType] = useState("dine-in"); // dine-in or takeout
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [verificationData, setVerificationData] = useState(null);
+  const [selectedDiscountItem, setSelectedDiscountItem] = useState(null); // For PWD/Senior item discount
 
   const SENIOR_DISCOUNT_PERCENTAGE = 20; // 20% fixed discount for seniors
   const PWD_DISCOUNT_PERCENTAGE = 20; // 20% fixed discount for PWD
@@ -67,6 +68,12 @@ export default function PaymentModal({ subtotal = 0, vatAdjustedSubtotal = 0, to
       return;
     }
 
+    // Check if item is selected for PWD/Senior discount
+    if ((discountType === "senior" || discountType === "pwd") && selectedDiscountItem === null) {
+      alertError("Item Selection Required", "Please select which item to apply the discount on.");
+      return;
+    }
+
     const discountValueToSend = discountType === "senior" || discountType === "pwd" ? 0.2 : safeDiscountValue;
 
     onConfirm({
@@ -80,6 +87,7 @@ export default function PaymentModal({ subtotal = 0, vatAdjustedSubtotal = 0, to
         value: discountValueToSend,
         amount: discountAmount,
         verification: verificationData || null,
+        selectedItemIndex: selectedDiscountItem, // Index of the item to apply discount to
       },
     });
 
@@ -89,6 +97,7 @@ export default function PaymentModal({ subtotal = 0, vatAdjustedSubtotal = 0, to
   const handleDiscountChange = (newDiscountType) => {
     setDiscountType(newDiscountType);
     setDiscountValue("");
+    setSelectedDiscountItem(null); // Reset selected item when discount type changes
     
     // Show verification modal for senior/pwd discounts
     if (newDiscountType === "senior" || newDiscountType === "pwd") {
@@ -107,6 +116,7 @@ export default function PaymentModal({ subtotal = 0, vatAdjustedSubtotal = 0, to
     setShowVerificationModal(false);
     setDiscountType("none");
     setVerificationData(null);
+    setSelectedDiscountItem(null); // Reset selected item when verification is cancelled
   };
 
   return (
@@ -264,6 +274,43 @@ export default function PaymentModal({ subtotal = 0, vatAdjustedSubtotal = 0, to
               autoFocus
             />
           </div>
+
+          {/* Select Item for Discount (PWD/Senior) */}
+          {(discountType === "senior" || discountType === "pwd") && verificationData && (
+            <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <label className="block text-sm font-semibold text-gray-700 mb-3">
+                Select Item for {discountType === "senior" ? "Senior" : "PWD"} Discount (1 item only)
+              </label>
+              
+              {cart.length === 0 ? (
+                <p className="text-sm text-gray-500">No items in cart</p>
+              ) : (
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {cart.map((item, idx) => (
+                    <label key={idx} className="flex items-start p-3 hover:bg-purple-100 rounded cursor-pointer border border-transparent hover:border-purple-300 transition">
+                      <input
+                        type="radio"
+                        name="discountItem"
+                        checked={selectedDiscountItem === idx}
+                        onChange={() => setSelectedDiscountItem(idx)}
+                        className="form-radio mt-1"
+                      />
+                      <div className="ml-3 flex-1">
+                        <p className="text-sm font-semibold text-gray-800">{item.item}</p>
+                        <p className="text-xs text-gray-600">Qty: {item.qty} × ₱{item.price.toFixed(2)} = ₱{(item.qty * item.price).toFixed(2)}</p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              )}
+
+              {selectedDiscountItem !== null && (
+                <p className="text-xs text-purple-600 mt-3 p-2 bg-purple-100 rounded">
+                  ✓ Selected: <span className="font-semibold">{cart[selectedDiscountItem]?.item}</span>
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Change */}
           <div className="bg-green-50 p-4 rounded-lg">
