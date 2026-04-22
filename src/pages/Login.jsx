@@ -19,13 +19,24 @@ export default function Login() {
     setError('');
     setSuccess(false);
 
-    if (!username.trim() || !password.trim()) {
-      setError('Please enter both username and password');
+    // Client-side validation
+    if (!username.trim()) {
+      setError('Please enter your username');
+      return;
+    }
+
+    if (!password.trim()) {
+      setError('Please enter your password');
+      return;
+    }
+
+    if (username.length < 3) {
+      setError('Username must be at least 3 characters long');
       return;
     }
 
     if (password.length < 3) {
-      setError('Password must be at least 3 characters long.');
+      setError('Password must be at least 3 characters long');
       return;
     }
 
@@ -42,10 +53,21 @@ export default function Login() {
       setLoading(false);
 
       if (!response.ok) {
-        if (data.error === 'Deactivated' || data.error === 'Branch Deactivated' || response.status === 403) {
-          setError(data.message || 'Your account is deactivated.');
+        // Handle specific error cases
+        if (response.status === 403) {
+          // Account or branch deactivation errors
+          setError(data.message || data.error || 'Access denied');
+        } else if (response.status === 400) {
+          // Login credential errors
+          if (data.error === 'Username is incorrect') {
+            setError('Username does not exist. Please check and try again.');
+          } else if (data.error === 'Wrong password') {
+            setError('Password is incorrect. Please try again.');
+          } else {
+            setError(data.error || 'Invalid username or password');
+          }
         } else {
-          setError(data.error || 'Invalid credentials!');
+          setError(data.error || 'Login failed. Please try again.');
         }
         return;
       }
@@ -57,22 +79,25 @@ export default function Login() {
       setSuccess(true);
 
       // Redirect based on role
-      switch (roleId) {
-        case 3:
-          navigate('/superadmin');
-          break;
-        case 2:
-          navigate('/admin');
-          break;
-        case 1:
-          navigate('/pos');
-          break;
-        default:
-          setError('Unknown role returned by backend.');
-      }
+      setTimeout(() => {
+        switch (roleId) {
+          case 3:
+            navigate('/superadmin');
+            break;
+          case 2:
+            navigate('/admin');
+            break;
+          case 1:
+            navigate('/pos');
+            break;
+          default:
+            setError('Unknown role returned by backend.');
+        }
+      }, 500);
     } catch (err) {
       setLoading(false);
-      setError('Server error. Cannot connect to backend.');
+      console.error('Login error:', err);
+      setError('Server error. Cannot connect to backend. Please try again.');
     }
   };
 
