@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import API_BASE_URL from '../../config/api';
-import { Store, Eye, FilePenLine, Power, PowerOff, Search, X } from "lucide-react";
+import { Store, Eye, FilePenLine, Power, PowerOff, Search, X, MapPin, User, AlertTriangle } from "lucide-react";
 import AddBranchModal from "./AddBranches";
 import ViewBranchModal from "./ViewBranchModal";
 import EditBranchModal from "./EditBranchModal";
@@ -279,9 +279,18 @@ export default function BranchList() {
                   </div>
 
                   <div className="space-y-1 text-sm text-gray-600">
-                    <p>{branch.locationText ? `Location: ${branch.locationText}` : "No saved location"}</p>
-                    <p>Contact Person: {formatContactPerson(branch)}</p>
-                    <p>Created by: {branch.createdBy || "Unknown"}</p>
+                    <div className="flex items-center gap-2">
+                      <MapPin size={16} className="text-gray-500" />
+                      <span>{formatLocationText(branch)}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <User size={16} className="text-gray-500" />
+                      <span>Contact Person: {formatContactPerson(branch)}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <User size={16} className="text-gray-500" />
+                      <span>Created by: {branch.createdBy || "Unknown"}</span>
+                    </div>
                   </div>
                 </div>
 
@@ -381,9 +390,10 @@ export default function BranchList() {
                 Are you sure you want to {branchToToggle.status === 'active' ? 'deactivate' : 'activate'} <span className="font-semibold">{branchToToggle.name || branchToToggle.branchName}</span>?
               </p>
               {branchToToggle.status === 'active' && (
-                <p className="text-sm text-red-600 mt-3 bg-red-50 p-2 rounded">
-                  ⚠️ Deactivating this branch will prevent it from processing transactions.
-                </p>
+                <div className="text-sm text-red-600 mt-3 bg-red-50 p-2 rounded flex items-center gap-2">
+                  <AlertTriangle size={16} />
+                  Deactivating this branch will prevent it from processing transactions.
+                </div>
               )}
             </div>
 

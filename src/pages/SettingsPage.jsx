@@ -26,6 +26,24 @@ export default function SimpleSettings() {
     description: ''
   });
 
+  // Menu Categories state
+  const [menuCategories, setMenuCategories] = useState([]);
+  const [menuCategoryLoading, setMenuCategoryLoading] = useState(false);
+  const [showMenuCategoryModal, setShowMenuCategoryModal] = useState(false);
+  const [editingMenuCategory, setEditingMenuCategory] = useState(null);
+  const [menuCategoryForm, setMenuCategoryForm] = useState({
+    category_name: ''
+  });
+
+  // Void Reason Management state
+  const [voidReasons, setVoidReasons] = useState([]);
+  const [voidReasonLoading, setVoidReasonLoading] = useState(false);
+  const [showVoidReasonModal, setShowVoidReasonModal] = useState(false);
+  const [editingVoidReason, setEditingVoidReason] = useState(null);
+  const [voidReasonForm, setVoidReasonForm] = useState({
+    reason_name: ''
+  });
+
   // Tax Management state
   const [taxRate, setTaxRate] = useState('12%');
   const [showTaxEditModal, setShowTaxEditModal] = useState(false);
@@ -41,6 +59,22 @@ export default function SimpleSettings() {
     rate: '',
     description: ''
   });
+
+  // Main & Sub Categories state
+  const [mainCategories, setMainCategories] = useState([]);
+  const [subCategories, setSubCategories] = useState([]);
+  const [showMainCategoryModal, setShowMainCategoryModal] = useState(false);
+  const [showSubCategoryModal, setShowSubCategoryModal] = useState(false);
+  const [editingMainCategory, setEditingMainCategory] = useState(null);
+  const [editingSubCategory, setEditingSubCategory] = useState(null);
+  const [mainCategoryForm, setMainCategoryForm] = useState({
+    name: ''
+  });
+  const [subCategoryForm, setSubCategoryForm] = useState({
+    main_category_id: '',
+    name: ''
+  });
+  const [selectedMainCategoryId, setSelectedMainCategoryId] = useState(null);
   
   // Account info state
   const [userData, setUserData] = useState({
@@ -59,6 +93,15 @@ export default function SimpleSettings() {
     username: '',
     currentPassword: '',
     newPassword: ''
+  });
+
+  // Delete Confirmation Modal state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmData, setDeleteConfirmData] = useState({
+    id: null,
+    name: '',
+    type: '', // 'category', 'mainCategory', 'subCategory', 'menuCategory', 'voidReason', 'discount'
+    onConfirm: null
   });
 
   const handleReportSubmit = async (event) => {
@@ -219,10 +262,17 @@ export default function SimpleSettings() {
   };
 
   const handleDeleteCategory = async (categoryId) => {
-    if (!window.confirm('Are you sure you want to delete this category?')) {
-      return;
-    }
+    const categoryName = categories.find(c => c.id === categoryId)?.name || 'this category';
+    setDeleteConfirmData({
+      id: categoryId,
+      name: categoryName,
+      type: 'category',
+      onConfirm: () => performDeleteCategory(categoryId)
+    });
+    setShowDeleteConfirm(true);
+  };
 
+  const performDeleteCategory = async (categoryId) => {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -245,7 +295,456 @@ export default function SimpleSettings() {
     } catch (err) {
       console.error('Error deleting category:', err);
       error('Delete Error', err.message);
+    } finally {
+      setShowDeleteConfirm(false);
     }
+  };
+
+  // ===== MAIN & SUB CATEGORIES MANAGEMENT FUNCTIONS =====
+  
+  // Fetch main categories
+  const fetchMainCategories = async (token) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/inventory/main-categories`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch main categories');
+      }
+
+      const data = await response.json();
+      setMainCategories(data || []);
+    } catch (err) {
+      console.error('Error fetching main categories:', err);
+    }
+  };
+
+  // Fetch sub categories
+  const fetchSubCategories = async (token, mainCategoryId = null) => {
+    try {
+      const url = mainCategoryId 
+        ? `${API_BASE_URL}/api/inventory/sub-categories?main_category_id=${mainCategoryId}`
+        : `${API_BASE_URL}/api/inventory/sub-categories`;
+      
+      const response = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch sub categories');
+      }
+
+      const data = await response.json();
+      setSubCategories(data || []);
+    } catch (err) {
+      console.error('Error fetching sub categories:', err);
+    }
+  };
+
+  // Open main category modal
+  const handleOpenMainCategoryModal = (category = null) => {
+    if (category) {
+      setEditingMainCategory(category);
+      setMainCategoryForm({
+        name: category.name
+      });
+    } else {
+      setEditingMainCategory(null);
+      setMainCategoryForm({
+        name: ''
+      });
+    }
+    setShowMainCategoryModal(true);
+  };
+
+  // Close main category modal
+  const handleCloseMainCategoryModal = () => {
+    setShowMainCategoryModal(false);
+    setEditingMainCategory(null);
+    setMainCategoryForm({
+      name: ''
+    });
+  };
+
+  // Save main category
+  const handleSaveMainCategory = async (e) => {
+    e.preventDefault();
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        error('Authentication Required', 'Please log in first');
+        return;
+      }
+
+      if (!mainCategoryForm.name.trim()) {
+        error('Validation Error', 'Category name is required');
+        return;
+      }
+
+      const endpoint = editingMainCategory
+        ? `${API_BASE_URL}/api/inventory/main-categories/${editingMainCategory.main_category_id}`
+        : `${API_BASE_URL}/api/inventory/main-categories`;
+
+      const method = editingMainCategory ? 'PUT' : 'POST';
+
+      const response = await fetch(endpoint, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(mainCategoryForm)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to ${editingMainCategory ? 'update' : 'add'} main category`);
+      }
+
+      await fetchMainCategories(token);
+      handleCloseMainCategoryModal();
+      success(
+        editingMainCategory ? 'Category Updated' : 'Category Added',
+        `Main category has been ${editingMainCategory ? 'updated' : 'added'} successfully.`
+      );
+    } catch (err) {
+      console.error('Error saving main category:', err);
+      error('Save Error', err.message);
+    }
+  };
+
+  // Delete main category
+  const handleDeleteMainCategory = async (categoryId) => {
+    const categoryName = mainCategories.find(c => c.main_category_id === categoryId)?.name || 'this category';
+    setDeleteConfirmData({
+      id: categoryId,
+      name: categoryName,
+      type: 'mainCategory',
+      onConfirm: () => performDeleteMainCategory(categoryId)
+    });
+    setShowDeleteConfirm(true);
+  };
+
+  // Open sub category modal
+  const handleOpenSubCategoryModal = (subCategory = null) => {
+    if (subCategory) {
+      setEditingSubCategory(subCategory);
+      setSubCategoryForm({
+        main_category_id: subCategory.main_category_id,
+        name: subCategory.name
+      });
+    } else {
+      setEditingSubCategory(null);
+      setSubCategoryForm({
+        main_category_id: selectedMainCategoryId || '',
+        name: ''
+      });
+    }
+    setShowSubCategoryModal(true);
+  };
+
+  // Close sub category modal
+  const handleCloseSubCategoryModal = () => {
+    setShowSubCategoryModal(false);
+    setEditingSubCategory(null);
+    setSubCategoryForm({
+      main_category_id: '',
+      name: ''
+    });
+  };
+
+  // Save sub category
+  const handleSaveSubCategory = async (e) => {
+    e.preventDefault();
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        error('Authentication Required', 'Please log in first');
+        return;
+      }
+
+      if (!subCategoryForm.main_category_id) {
+        error('Validation Error', 'Please select a main category');
+        return;
+      }
+
+      if (!subCategoryForm.name.trim()) {
+        error('Validation Error', 'Sub category name is required');
+        return;
+      }
+
+      const endpoint = editingSubCategory
+        ? `${API_BASE_URL}/api/inventory/sub-categories/${editingSubCategory.sub_category_id}`
+        : `${API_BASE_URL}/api/inventory/sub-categories`;
+
+      const method = editingSubCategory ? 'PUT' : 'POST';
+
+      const response = await fetch(endpoint, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          main_category_id: parseInt(subCategoryForm.main_category_id),
+          name: subCategoryForm.name
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to ${editingSubCategory ? 'update' : 'add'} sub category`);
+      }
+
+      // Fetch ALL sub categories to keep count accurate
+      await fetchSubCategories(token);
+      handleCloseSubCategoryModal();
+      success(
+        editingSubCategory ? 'Sub Category Updated' : 'Sub Category Added',
+        `Sub category has been ${editingSubCategory ? 'updated' : 'added'} successfully.`
+      );
+    } catch (err) {
+      console.error('Error saving sub category:', err);
+      error('Save Error', err.message);
+    }
+  };
+
+  // Delete sub category
+  const handleDeleteSubCategory = async (subCategoryId) => {
+    const subCategoryName = subCategories.find(s => s.sub_category_id === subCategoryId)?.name || 'this sub category';
+    setDeleteConfirmData({
+      id: subCategoryId,
+      name: subCategoryName,
+      type: 'subCategory',
+      onConfirm: () => performDeleteSubCategory(subCategoryId)
+    });
+    setShowDeleteConfirm(true);
+  };
+
+
+  // ===== MENU CATEGORIES MANAGEMENT FUNCTIONS =====
+
+  // Fetch menu categories
+  const fetchMenuCategories = async (token) => {
+    setMenuCategoryLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/categories`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch menu categories');
+      }
+
+      const data = await response.json();
+      setMenuCategories(data || []);
+    } catch (err) {
+      console.error('Error fetching menu categories:', err);
+      error('Fetch Error', 'Failed to load menu categories');
+    } finally {
+      setMenuCategoryLoading(false);
+    }
+  };
+
+  // Open menu category modal
+  const handleOpenMenuCategoryModal = (category = null) => {
+    if (category) {
+      setEditingMenuCategory(category);
+      setMenuCategoryForm({
+        category_name: category.category_name
+      });
+    } else {
+      setEditingMenuCategory(null);
+      setMenuCategoryForm({
+        category_name: ''
+      });
+    }
+    setShowMenuCategoryModal(true);
+  };
+
+  // Close menu category modal
+  const handleCloseMenuCategoryModal = () => {
+    setShowMenuCategoryModal(false);
+    setEditingMenuCategory(null);
+    setMenuCategoryForm({
+      category_name: ''
+    });
+  };
+
+  // Save menu category
+  const handleSaveMenuCategory = async (e) => {
+    e.preventDefault();
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        error('Authentication Required', 'Please log in first');
+        return;
+      }
+
+      if (!menuCategoryForm.category_name.trim()) {
+        error('Validation Error', 'Category name is required');
+        return;
+      }
+
+      const endpoint = editingMenuCategory
+        ? `${API_BASE_URL}/api/categories/${editingMenuCategory.category_id}`
+        : `${API_BASE_URL}/api/categories`;
+
+      const method = editingMenuCategory ? 'PUT' : 'POST';
+
+      const response = await fetch(endpoint, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          category_name: menuCategoryForm.category_name
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to ${editingMenuCategory ? 'update' : 'add'} category`);
+      }
+
+      await fetchMenuCategories(token);
+      handleCloseMenuCategoryModal();
+      success(
+        editingMenuCategory ? 'Category Updated' : 'Category Added',
+        `Menu category has been ${editingMenuCategory ? 'updated' : 'added'} successfully.`
+      );
+    } catch (err) {
+      console.error('Error saving menu category:', err);
+      error('Save Error', err.message);
+    }
+  };
+
+  // Delete menu category
+  const handleDeleteMenuCategory = async (categoryId) => {
+    const categoryName = menuCategories.find(c => c.id === categoryId)?.name || 'this menu category';
+    setDeleteConfirmData({
+      id: categoryId,
+      name: categoryName,
+      type: 'menuCategory',
+      onConfirm: () => performDeleteMenuCategory(categoryId)
+    });
+    setShowDeleteConfirm(true);
+  };
+
+  // ===== VOID REASON MANAGEMENT FUNCTIONS =====
+
+  // Fetch void reasons
+  const fetchVoidReasons = async (token) => {
+    setVoidReasonLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/void-reasons`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch void reasons');
+      }
+
+      const data = await response.json();
+      setVoidReasons(data || []);
+    } catch (err) {
+      console.error('Error fetching void reasons:', err);
+      error('Fetch Error', 'Failed to load void reasons');
+    } finally {
+      setVoidReasonLoading(false);
+    }
+  };
+
+  // Open void reason modal
+  const handleOpenVoidReasonModal = (reason = null) => {
+    if (reason) {
+      setEditingVoidReason(reason);
+      setVoidReasonForm({
+        reason_name: reason.reason_name
+      });
+    } else {
+      setEditingVoidReason(null);
+      setVoidReasonForm({
+        reason_name: ''
+      });
+    }
+    setShowVoidReasonModal(true);
+  };
+
+  // Close void reason modal
+  const handleCloseVoidReasonModal = () => {
+    setShowVoidReasonModal(false);
+    setEditingVoidReason(null);
+    setVoidReasonForm({
+      reason_name: ''
+    });
+  };
+
+  // Save void reason
+  const handleSaveVoidReason = async (e) => {
+    e.preventDefault();
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        error('Authentication Required', 'Please log in first');
+        return;
+      }
+
+      if (!voidReasonForm.reason_name.trim()) {
+        error('Validation Error', 'Reason name is required');
+        return;
+      }
+
+      const endpoint = editingVoidReason
+        ? `${API_BASE_URL}/api/void-reasons/${editingVoidReason.void_reason_id}`
+        : `${API_BASE_URL}/api/void-reasons`;
+
+      const method = editingVoidReason ? 'PUT' : 'POST';
+
+      const response = await fetch(endpoint, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          reason_name: voidReasonForm.reason_name
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to ${editingVoidReason ? 'update' : 'add'} void reason`);
+      }
+
+      await fetchVoidReasons(token);
+      handleCloseVoidReasonModal();
+      success(
+        editingVoidReason ? 'Reason Updated' : 'Reason Added',
+        `Void reason has been ${editingVoidReason ? 'updated' : 'added'} successfully.`
+      );
+    } catch (err) {
+      console.error('Error saving void reason:', err);
+      error('Save Error', err.message);
+    }
+  };
+
+  // Delete void reason
+  const handleDeleteVoidReason = async (reasonId) => {
+    const reasonName = voidReasons.find(r => r.void_reason_id === reasonId)?.reason_name || 'this reason';
+    setDeleteConfirmData({
+      id: reasonId,
+      name: reasonName,
+      type: 'voidReason',
+      onConfirm: () => performDeleteVoidReason(reasonId)
+    });
+    setShowDeleteConfirm(true);
   };
 
   // Tax Management Functions
@@ -294,6 +793,13 @@ export default function SimpleSettings() {
         headers: { Authorization: `Bearer ${token}` },
       });
 
+      // Gracefully handle 404 - endpoint may not exist
+      if (response.status === 404) {
+        console.warn('Discounts endpoint not available');
+        setDiscounts([]);
+        return;
+      }
+
       if (!response.ok) {
         throw new Error('Failed to fetch discounts');
       }
@@ -302,7 +808,8 @@ export default function SimpleSettings() {
       setDiscounts(data.discounts || []);
     } catch (err) {
       console.error('Error fetching discounts:', err);
-      error('Fetch Error', 'Failed to load discounts');
+      // Don't show error for this non-critical feature
+      setDiscounts([]);
     } finally {
       setDiscountLoading(false);
     }
@@ -397,33 +904,14 @@ export default function SimpleSettings() {
   };
 
   const handleDeleteDiscount = async (discountId) => {
-    if (!window.confirm('Are you sure you want to delete this discount?')) {
-      return;
-    }
-
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        error('Authentication Required', 'Please log in first');
-        return;
-      }
-
-      const response = await fetch(`${API_BASE_URL}/api/discounts/${discountId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete discount');
-      }
-
-      await fetchDiscounts(token);
-      success('Discount Deleted', 'Discount has been deleted successfully.');
-    } catch (err) {
-      console.error('Error deleting discount:', err);
-      error('Delete Error', err.message);
-    }
+    const discountName = discounts.find(d => d.discount_id === discountId)?.discount_name || 'this discount';
+    setDeleteConfirmData({
+      id: discountId,
+      name: discountName,
+      type: 'discount',
+      onConfirm: () => performDeleteDiscount(discountId)
+    });
+    setShowDeleteConfirm(true);
   };
 
   const handleToggleDiscountStatus = async (discountId, currentStatus) => {
@@ -481,14 +969,14 @@ export default function SimpleSettings() {
         const data = await response.json();
         setUserData({
           firstName: data.first_name || '',
-          middleName: data.middle_name || '',
+          middleName: data.middle_initial || data.middle_name || '',
           lastName: data.last_name || '',
           contactNumber: data.contact_number || '',
           username: data.username || ''
         });
         setEditFormData({
           firstName: data.first_name || '',
-          middleName: data.middle_name || '',
+          middleName: data.middle_initial || data.middle_name || '',
           lastName: data.last_name || '',
           contactNumber: data.contact_number || '',
           username: data.username || '',
@@ -509,6 +997,10 @@ export default function SimpleSettings() {
         // Fetch categories if admin or superadmin
         if (payload.role_id === 2 || payload.role_id === 3) {
           await fetchCategories(token);
+          await fetchMainCategories(token);
+          await fetchSubCategories(token);
+          await fetchMenuCategories(token);
+          await fetchVoidReasons(token);
           await fetchDiscounts(token);
         }
       } catch (error) {
@@ -559,7 +1051,7 @@ export default function SimpleSettings() {
       const updatedData = await response.json();
       setUserData({
         firstName: updatedData.user?.first_name || updatedData.first_name || '',
-        middleName: updatedData.user?.middle_name || updatedData.middle_name || '',
+        middleName: updatedData.user?.middle_initial || updatedData.middle_initial || updatedData.user?.middle_name || updatedData.middle_name || '',
         lastName: updatedData.user?.last_name || updatedData.last_name || '',
         contactNumber: updatedData.user?.contact_number || updatedData.contact_number || '',
         username: updatedData.user?.username || updatedData.username || ''
@@ -579,17 +1071,26 @@ export default function SimpleSettings() {
 
   // Handle edit modal
   const handleEditClick = () => {
+    setEditFormData({
+      firstName: userData.firstName || '',
+      middleName: userData.middleName || '',
+      lastName: userData.lastName || '',
+      contactNumber: userData.contactNumber || '',
+      username: userData.username || '',
+      currentPassword: '',
+      newPassword: ''
+    });
     setShowEditModal(true);
   };
 
   const handleCloseModal = () => {
     setShowEditModal(false);
     setEditFormData({
-      firstName: userData.firstName,
-      middleName: userData.middleName,
-      lastName: userData.lastName,
-      contactNumber: userData.contactNumber,
-      username: userData.username,
+      firstName: userData.firstName || '',
+      middleName: userData.middleName || '',
+      lastName: userData.lastName || '',
+      contactNumber: userData.contactNumber || '',
+      username: userData.username || '',
       currentPassword: '',
       newPassword: ''
     });
@@ -602,6 +1103,123 @@ export default function SimpleSettings() {
       [name]: value
     }));
   };
+
+  // ===== PERFORM DELETE FUNCTIONS =====
+
+  const performDeleteMainCategory = async (categoryId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/api/inventory/main-categories/${categoryId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Failed to delete main category');
+      await fetchMainCategories(token);
+      success('Main Category Deleted', 'Main category has been deleted successfully.');
+    } catch (err) {
+      console.error('Error deleting main category:', err);
+      error('Delete Error', err.message);
+    } finally {
+      setShowDeleteConfirm(false);
+    }
+  };
+
+  const performDeleteSubCategory = async (categoryId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/api/inventory/sub-categories/${categoryId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Failed to delete sub category');
+      await fetchMainCategories(token);
+      success('Sub Category Deleted', 'Sub category has been deleted successfully.');
+    } catch (err) {
+      console.error('Error deleting sub category:', err);
+      error('Delete Error', err.message);
+    } finally {
+      setShowDeleteConfirm(false);
+    }
+  };
+
+  const performDeleteMenuCategory = async (categoryId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/api/menu-categories/${categoryId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Failed to delete menu category');
+      await fetchMenuCategories(token);
+      success('Menu Category Deleted', 'Menu category has been deleted successfully.');
+    } catch (err) {
+      console.error('Error deleting menu category:', err);
+      error('Delete Error', err.message);
+    } finally {
+      setShowDeleteConfirm(false);
+    }
+  };
+
+  const performDeleteVoidReason = async (reasonId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/api/void-reasons/${reasonId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Failed to delete void reason');
+      await fetchVoidReasons(token);
+      success('Void Reason Deleted', 'Void reason has been deleted successfully.');
+    } catch (err) {
+      console.error('Error deleting void reason:', err);
+      error('Delete Error', err.message);
+    } finally {
+      setShowDeleteConfirm(false);
+    }
+  };
+
+  const performDeleteDiscount = async (discountId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/api/discounts/${discountId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Failed to delete discount');
+      await fetchDiscounts(token);
+      success('Discount Deleted', 'Discount has been deleted successfully.');
+    } catch (err) {
+      console.error('Error deleting discount:', err);
+      error('Delete Error', err.message);
+    } finally {
+      setShowDeleteConfirm(false);
+    }
+  };
+
+  const performDeleteTax = async (taxId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/api/taxes/${taxId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Failed to delete tax');
+      await fetchTaxes(token);
+      success('Tax Deleted', 'Tax has been deleted successfully.');
+    } catch (err) {
+      console.error('Error deleting tax:', err);
+      error('Delete Error', err.message);
+    } finally {
+      setShowDeleteConfirm(false);
+    }
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleteConfirmData.onConfirm) {
+      deleteConfirmData.onConfirm();
+    }
+  };
+
 
   return (
     <div className={`space-y-6 pb-20 ${roleId === 1 ? 'h-screen overflow-y-auto' : ''}`}>
@@ -761,69 +1379,260 @@ export default function SimpleSettings() {
 
           {/* Category Management Tab */}
           {activeTab === 'category' && (
-            <div className="bg-white rounded-lg p-6 shadow-sm">
-              <div className="flex justify-between items-center mb-6">
-                <div>
-                  <h2 className="text-base font-bold mb-1">Category Management</h2>
-                  <p className="text-xs text-gray-600">Manage menu, inventory, and void transaction categories</p>
+            <div className="space-y-6">
+              {/* Main Categories Section */}
+              <div className="bg-white rounded-lg p-6 shadow-sm">
+                <div className="flex justify-between items-center mb-6">
+                  <div>
+                    <h2 className="text-base font-bold mb-1">Main Categories</h2>
+                    <p className="text-xs text-gray-600">Manage main product categories (Beverages, Appetizers, Main Course, etc.)</p>
+                  </div>
+                  <button
+                    onClick={() => handleOpenMainCategoryModal()}
+                    className="py-2 px-4 bg-emerald-700 text-white text-sm rounded font-semibold hover:bg-emerald-800 flex items-center gap-2"
+                  >
+                    <Plus size={18} /> Add Main Category
+                  </button>
                 </div>
-                <button
-                  onClick={() => handleOpenCategoryModal()}
-                  className="py-2 px-4 bg-emerald-700 text-white text-sm rounded font-semibold hover:bg-emerald-800"
-                >
-                  + Add Category
-                </button>
+
+                {mainCategories.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">No main categories found. Add a new category to get started.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-100 border-b border-gray-300">
+                        <tr>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-700">Category Name</th>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-700">Sub Categories</th>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-700">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {mainCategories.map((mainCat, index) => {
+                          const subCatCount = subCategories.filter(sub => sub.main_category_id === mainCat.main_category_id).length;
+                          return (
+                            <tr key={mainCat.main_category_id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                              <td className="px-4 py-3 font-medium text-gray-800">{mainCat.name}</td>
+                              <td className="px-4 py-3">
+                                <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                                  {subCatCount} sub {subCatCount === 1 ? 'category' : 'categories'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 space-x-2 flex">
+                                <button
+                                  onClick={() => {
+                                    setSelectedMainCategoryId(mainCat.main_category_id);
+                                  }}
+                                  className="px-3 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600"
+                                >
+                                  View Subs
+                                </button>
+                                <button
+                                  onClick={() => handleOpenMainCategoryModal(mainCat)}
+                                  className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteMainCategory(mainCat.main_category_id)}
+                                  className="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600"
+                                >
+                                  Delete
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
 
-              {categoryLoading ? (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">Loading categories...</p>
+              {/* Sub Categories Section */}
+              <div className="bg-white rounded-lg p-6 shadow-sm">
+                <div className="flex justify-between items-center mb-6">
+                  <div>
+                    <h2 className="text-base font-bold mb-1">Sub Categories</h2>
+                    <p className="text-xs text-gray-600">
+                      {selectedMainCategoryId 
+                        ? `Managing sub categories for: ${mainCategories.find(m => m.main_category_id === selectedMainCategoryId)?.name || 'Unknown'}`
+                        : 'Select a main category to view or add sub categories'}
+                    </p>
+                  </div>
+                  {selectedMainCategoryId && (
+                    <button
+                      onClick={() => handleOpenSubCategoryModal()}
+                      className="py-2 px-4 bg-emerald-700 text-white text-sm rounded font-semibold hover:bg-emerald-800 flex items-center gap-2"
+                    >
+                      <Plus size={18} /> Add Sub Category
+                    </button>
+                  )}
                 </div>
-              ) : categories.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">No categories found. Add a new category to get started.</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-100 border-b border-gray-300">
-                      <tr>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700">Category Name</th>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700">Type</th>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700">Description</th>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {categories.map((category, index) => (
-                        <tr key={category.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                          <td className="px-4 py-3 text-gray-800">{category.name}</td>
-                          <td className="px-4 py-3">
-                            <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium">
-                              {category.type === 'menu' ? 'Menu' : category.type === 'inventory' ? 'Inventory' : 'Void Reason'}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-gray-600 text-xs">{category.description || '-'}</td>
-                          <td className="px-4 py-3 space-x-2 flex">
-                            <button
-                              onClick={() => handleOpenCategoryModal(category)}
-                              className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => handleDeleteCategory(category.id)}
-                              className="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600"
-                            >
-                              Delete
-                            </button>
-                          </td>
+
+                {!selectedMainCategoryId ? (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">Click "View Subs" on a main category to manage its sub categories.</p>
+                  </div>
+                ) : subCategories.filter(sub => sub.main_category_id === selectedMainCategoryId).length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">No sub categories found. Add a new sub category to get started.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-100 border-b border-gray-300">
+                        <tr>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-700">Sub Category Name</th>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-700">Actions</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {subCategories.filter(sub => sub.main_category_id === selectedMainCategoryId).map((subCat, index) => (
+                          <tr key={subCat.sub_category_id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                            <td className="px-4 py-3 font-medium text-gray-800">{subCat.name}</td>
+                            <td className="px-4 py-3 space-x-2 flex">
+                              <button
+                                onClick={() => handleOpenSubCategoryModal(subCat)}
+                                className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDeleteSubCategory(subCat.sub_category_id)}
+                                className="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600"
+                              >
+                                Delete
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Menu Categories Section */}
+              <div className="bg-white rounded-lg p-6 shadow-sm">
+                <div className="flex justify-between items-center mb-6">
+                  <div>
+                    <h2 className="text-base font-bold mb-1">Menu Categories</h2>
+                    <p className="text-xs text-gray-600">Manage menu categories for your restaurant/cafe products</p>
+                  </div>
+                  <button
+                    onClick={() => handleOpenMenuCategoryModal()}
+                    className="py-2 px-4 bg-emerald-700 text-white text-sm rounded font-semibold hover:bg-emerald-800 flex items-center gap-2"
+                  >
+                    <Plus size={18} /> Add Menu Category
+                  </button>
                 </div>
-              )}
+
+                {menuCategoryLoading ? (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">Loading menu categories...</p>
+                  </div>
+                ) : menuCategories.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">No menu categories found. Add a new category to get started.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-100 border-b border-gray-300">
+                        <tr>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-700">Category Name</th>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-700">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {menuCategories.map((menuCat, index) => (
+                          <tr key={menuCat.category_id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                            <td className="px-4 py-3 font-medium text-gray-800">{menuCat.category_name}</td>
+                            <td className="px-4 py-3 space-x-2 flex">
+                              <button
+                                onClick={() => handleOpenMenuCategoryModal(menuCat)}
+                                className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDeleteMenuCategory(menuCat.category_id)}
+                                className="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600"
+                              >
+                                Delete
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Void Reason Management Section */}
+              <div className="bg-white rounded-lg p-6 shadow-sm">
+                <div className="flex justify-between items-center mb-6">
+                  <div>
+                    <h2 className="text-base font-bold mb-1">Void Reasons</h2>
+                    <p className="text-xs text-gray-600">Manage reasons for voiding transactions</p>
+                  </div>
+                  <button
+                    onClick={() => handleOpenVoidReasonModal()}
+                    className="py-2 px-4 bg-emerald-700 text-white text-sm rounded font-semibold hover:bg-emerald-800 flex items-center gap-2"
+                  >
+                    <Plus size={18} /> Add Void Reason
+                  </button>
+                </div>
+
+                {voidReasonLoading ? (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">Loading void reasons...</p>
+                  </div>
+                ) : voidReasons.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">No void reasons found. Add a new reason to get started.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-100 border-b border-gray-300">
+                        <tr>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-700">Reason Name</th>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-700">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {voidReasons.map((reason, index) => (
+                          <tr key={reason.void_reason_id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                            <td className="px-4 py-3 font-medium text-gray-800">{reason.reason_name}</td>
+                            <td className="px-4 py-3 space-x-2 flex">
+                              <button
+                                onClick={() => handleOpenVoidReasonModal(reason)}
+                                className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDeleteVoidReason(reason.void_reason_id)}
+                                className="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600"
+                              >
+                                Delete
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Legacy Category Management (Optional) */}
+              
             </div>
           )}
 
@@ -1368,6 +2177,211 @@ export default function SimpleSettings() {
               </div>
             </div>
           )}
+
+          {/* Main Category Modal */}
+          {showMainCategoryModal && (
+            <div className="fixed top-0 left-0 w-screen h-screen z-50 bg-black/50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
+                {/* Header */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                  <div className="flex items-center gap-3">
+                    <div className="text-emerald-700">
+                      {editingMainCategory ? <Edit2 size={20} /> : <Plus size={20} />}
+                    </div>
+                    <h2 className="text-lg font-semibold text-gray-800">
+                      {editingMainCategory ? 'Edit Main Category' : 'Add Main Category'}
+                    </h2>
+                  </div>
+                  <button
+                    onClick={handleCloseMainCategoryModal}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+
+                {/* Form Content */}
+                <form onSubmit={handleSaveMainCategory} className="px-6 py-4 space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Category Name</label>
+                    <input
+                      type="text"
+                      value={mainCategoryForm.name}
+                      onChange={(e) => setMainCategoryForm({...mainCategoryForm, name: e.target.value})}
+                      placeholder="e.g., Beverages, Appetizers"
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                      required
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full py-2 bg-emerald-700 text-white text-sm font-semibold rounded hover:bg-emerald-800"
+                  >
+                    {editingMainCategory ? 'Update' : 'Add'} Main Category
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Sub Category Modal */}
+          {showSubCategoryModal && (
+            <div className="fixed top-0 left-0 w-screen h-screen z-50 bg-black/50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
+                {/* Header */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                  <div className="flex items-center gap-3">
+                    <div className="text-emerald-700">
+                      {editingSubCategory ? <Edit2 size={20} /> : <Plus size={20} />}
+                    </div>
+                    <h2 className="text-lg font-semibold text-gray-800">
+                      {editingSubCategory ? 'Edit Sub Category' : 'Add Sub Category'}
+                    </h2>
+                  </div>
+                  <button
+                    onClick={handleCloseSubCategoryModal}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+
+                {/* Form Content */}
+                <form onSubmit={handleSaveSubCategory} className="px-6 py-4 space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Main Category</label>
+                    <select
+                      value={subCategoryForm.main_category_id}
+                      onChange={(e) => setSubCategoryForm({...subCategoryForm, main_category_id: e.target.value})}
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-white"
+                      required
+                    >
+                      <option value="">Select a main category</option>
+                      {mainCategories.map((cat) => (
+                        <option key={cat.main_category_id} value={cat.main_category_id}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Sub Category Name</label>
+                    <input
+                      type="text"
+                      value={subCategoryForm.name}
+                      onChange={(e) => setSubCategoryForm({...subCategoryForm, name: e.target.value})}
+                      placeholder="e.g., Soft Drinks, Fried Items"
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                      required
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full py-2 bg-emerald-700 text-white text-sm font-semibold rounded hover:bg-emerald-800"
+                  >
+                    {editingSubCategory ? 'Update' : 'Add'} Sub Category
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Menu Category Modal */}
+          {showMenuCategoryModal && (
+            <div className="fixed top-0 left-0 w-screen h-screen z-50 bg-black/50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
+                {/* Header */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                  <div className="flex items-center gap-3">
+                    <div className="text-emerald-700">
+                      {editingMenuCategory ? <Edit2 size={20} /> : <Plus size={20} />}
+                    </div>
+                    <h2 className="text-lg font-semibold text-gray-800">
+                      {editingMenuCategory ? 'Edit Menu Category' : 'Add Menu Category'}
+                    </h2>
+                  </div>
+                  <button
+                    onClick={handleCloseMenuCategoryModal}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+
+                {/* Form Content */}
+                <form onSubmit={handleSaveMenuCategory} className="px-6 py-4 space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Category Name</label>
+                    <input
+                      type="text"
+                      value={menuCategoryForm.category_name}
+                      onChange={(e) => setMenuCategoryForm({...menuCategoryForm, category_name: e.target.value})}
+                      placeholder="e.g., Beverages, Appetizers, Main Course"
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                      required
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full py-2 bg-emerald-700 text-white text-sm font-semibold rounded hover:bg-emerald-800"
+                  >
+                    {editingMenuCategory ? 'Update' : 'Add'} Menu Category
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Void Reason Modal */}
+          {showVoidReasonModal && (
+            <div className="fixed top-0 left-0 w-screen h-screen z-50 bg-black/50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
+                {/* Header */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                  <div className="flex items-center gap-3">
+                    <div className="text-emerald-700">
+                      {editingVoidReason ? <Edit2 size={20} /> : <Plus size={20} />}
+                    </div>
+                    <h2 className="text-lg font-semibold text-gray-800">
+                      {editingVoidReason ? 'Edit Void Reason' : 'Add Void Reason'}
+                    </h2>
+                  </div>
+                  <button
+                    onClick={handleCloseVoidReasonModal}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+
+                {/* Form Content */}
+                <form onSubmit={handleSaveVoidReason} className="px-6 py-4 space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Reason Name</label>
+                    <input
+                      type="text"
+                      value={voidReasonForm.reason_name}
+                      onChange={(e) => setVoidReasonForm({...voidReasonForm, reason_name: e.target.value})}
+                      placeholder="e.g., Spoilage, Cashier Error, Customer Request"
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                      required
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full py-2 bg-emerald-700 text-white text-sm font-semibold rounded hover:bg-emerald-800"
+                  >
+                    {editingVoidReason ? 'Update' : 'Add'} Void Reason
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
         </>
       )}
 
@@ -1689,6 +2703,41 @@ export default function SimpleSettings() {
             )}
           </div>
         </>
+      )}
+
+      {/* Delete Confirmation Modal - Outside conditional */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full">
+            <div className="bg-red-50 px-6 py-4 border-b border-red-200">
+              <h3 className="text-lg font-bold text-red-600">Delete Confirmation</h3>
+            </div>
+            
+            <div className="px-6 py-4">
+              <p className="text-gray-700 mb-2">
+                Are you sure you want to delete <span className="font-semibold">"{deleteConfirmData.name}"</span>?
+              </p>
+              <p className="text-sm text-gray-500">
+                This action cannot be undone.
+              </p>
+            </div>
+
+            <div className="flex gap-3 justify-end px-6 py-4 bg-gray-50">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold rounded transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded transition"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

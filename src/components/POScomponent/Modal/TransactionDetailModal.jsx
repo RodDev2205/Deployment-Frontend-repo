@@ -19,12 +19,41 @@ export default function TransactionDetailModal({
   const { success, error: alertError } = useAlert();
 
   const [showVoidForm, setShowVoidForm] = React.useState(false);
-  const [reason, setReason] = React.useState("");
+  const [voidReasonId, setVoidReasonId] = React.useState("");
+  const [voidReasons, setVoidReasons] = React.useState([]);
+  const [loadingReasons, setLoadingReasons] = React.useState(false);
   const [adminPin, setAdminPin] = React.useState("");
   const [submittingVoid, setSubmittingVoid] = React.useState(false);
   const [voidError, setVoidError] = React.useState("");
 
+  // Fetch void reasons on mount
+  React.useEffect(() => {
+    const fetchVoidReasons = async () => {
+      try {
+        setLoadingReasons(true);
+        const token = localStorage.getItem("token");
+        const res = await fetch(`${API_BASE_URL}/api/pos/void-reasons`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
+        if (!res.ok) {
+          throw new Error("Failed to fetch void reasons");
+        }
+
+        const data = await res.json();
+        setVoidReasons(data || []);
+      } catch (err) {
+        console.error("Error fetching void reasons:", err);
+        alertError("Error", "Failed to load void reasons");
+      } finally {
+        setLoadingReasons(false);
+      }
+    };
+
+    fetchVoidReasons();
+  }, []);
 
   const formatDate = (iso) => {
     try {
@@ -170,12 +199,16 @@ export default function TransactionDetailModal({
                 <label className="block text-sm font-medium mb-2">Reason for void:</label>
                 <select
                   className="w-full border rounded px-3 py-2"
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
+                  value={voidReasonId}
+                  onChange={(e) => setVoidReasonId(e.target.value)}
+                  disabled={loadingReasons}
                 >
                   <option value="">-- Select a reason --</option>
-                  <option value="Spoilage">Spoilage</option>
-                  <option value="Cashier error">Cashier error</option>
+                  {voidReasons.map((reason) => (
+                    <option key={reason.void_reason_id} value={reason.void_reason_id}>
+                      {reason.reason_name}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div>
@@ -199,7 +232,7 @@ export default function TransactionDetailModal({
                   disabled={submittingVoid}
                   className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg disabled:opacity-50"
                   onClick={async () => {
-                    if (!reason.trim() || !adminPin.trim()) {
+                    if (!voidReasonId || !adminPin.trim()) {
                       setVoidError("Reason and PIN are required");
                       return;
                     }
@@ -208,7 +241,7 @@ export default function TransactionDetailModal({
                       const token = localStorage.getItem("token");
                       const body = {
                         transaction_id: transaction.transaction_id,
-                        reason,
+                        void_reason_id: parseInt(voidReasonId),
                         admin_pin: adminPin,
                       };
                       const res = await fetch(`${API_BASE_URL}/api/pos/void`, {
@@ -251,7 +284,12 @@ export default function TransactionDetailModal({
               {voidAllowed ? (
                 <button
                   className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-lg text-base transition-colors"
-                  onClick={() => { setShowVoidForm(true); setVoidError(""); }}
+                  onClick={() => { 
+                    setShowVoidForm(true); 
+                    setVoidError("");
+                    setVoidReasonId("");
+                    setAdminPin("");
+                  }}
                 >
                   Void Transaction
                 </button>

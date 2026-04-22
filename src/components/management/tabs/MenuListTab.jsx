@@ -15,6 +15,10 @@ export default function MenuListTab({ refreshKey }) {
   const [linkedIngredients, setLinkedIngredients] = useState([]);
   const [loadingIngredients, setLoadingIngredients] = useState(false);
 
+  // Menu Categories from backend
+  const [menuCategories, setMenuCategories] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
+
   // alert hook
   const { error, warning, success, info, confirm, danger } = useAlert();
 
@@ -25,6 +29,7 @@ export default function MenuListTab({ refreshKey }) {
   // 🔹 Fetch from backend
   useEffect(() => {
     fetchProducts();
+    fetchMenuCategories();
   }, [refreshKey]);
 
   const fetchProducts = async () => {
@@ -47,6 +52,32 @@ export default function MenuListTab({ refreshKey }) {
       setProducts(data);
     } catch (err) {
       console.error("Failed to fetch products:", err);
+    }
+  };
+
+  const fetchMenuCategories = async () => {
+    try {
+      setLoadingCategories(true);
+      const token = localStorage.getItem("token");
+
+      const res = await fetch(`${API_BASE_URL}/api/categories`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        const err = await res.text();
+        console.error("Fetch categories error:", err);
+        return;
+      }
+
+      const data = await res.json();
+      setMenuCategories(data || []);
+    } catch (err) {
+      console.error("Failed to fetch menu categories:", err);
+    } finally {
+      setLoadingCategories(false);
     }
   };
 
@@ -119,8 +150,8 @@ export default function MenuListTab({ refreshKey }) {
     return matchesSearch && matchesStatus && matchesCategory;
   });
 
-  // Get unique categories
-  const categories = ["all", ...new Set(products.map(p => p.category_name).filter(Boolean))];
+  // Prepare categories for display
+  const categoryNames = menuCategories.map(cat => cat.category_name);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const start = (page - 1) * ITEMS_PER_PAGE;
@@ -198,14 +229,13 @@ export default function MenuListTab({ refreshKey }) {
               setCategoryFilter(e.target.value);
             }}
             className="border px-4 py-2 rounded-lg"
+            disabled={loadingCategories}
           >
             <option value="all">All Categories</option>
-            {categories.map((cat) => (
-              cat !== "all" && (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              )
+            {categoryNames.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
             ))}
           </select>
 
@@ -253,50 +283,63 @@ export default function MenuListTab({ refreshKey }) {
       )}
 
       {/* Grid */}
-      <div className="grid grid-cols-4 gap-6 mb-8">
-        {currentItems.map((item) => (
-          <div
-            key={item.product_id}
-            onClick={() => {
-              setSelectedProduct(item);
-              setNote(item.decline_reason || "");
-              fetchLinkedIngredients(item.product_id);
-            }}
-            className="bg-white rounded-lg shadow-md p-6 border hover:shadow-lg transition cursor-pointer"
-          >
-            <div className="h-24 bg-gray-100 rounded mb-4 flex items-center justify-center">
-              {item.image_path ? (
-                <img
-                  src={`${API_BASE_URL}${item.image_path}`}
-                  alt={item.product_name}
-                  className="h-full object-cover rounded"
-                />
-              ) : (
-                "No Image"
-              )}
-            </div>
-
-            <h3 className="font-semibold">{item.product_name}</h3>
-            <p className="text-sm text-gray-500">{item.category_name}</p>
-            <p className="text-sm font-medium mt-1">₱ {item.price}</p>
-            <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold mt-2 ${item.vat_type === 'non-vat' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
-              {item.vat_type === 'non-vat' ? 'Non-VATable' : 'VATable'}
-            </span>
-
-            <p
-              className={`text-sm font-medium mt-3 ${
-                item.approval_status === "APPROVED"
-                  ? "text-green-600"
-                  : item.approval_status === "PENDING"
-                  ? "text-yellow-600"
-                  : "text-red-600"
-              }`}
-            >
-              {item.approval_status}
+      {currentItems.length === 0 ? (
+        <div className="flex items-center justify-center py-16 bg-gray-50 rounded-lg">
+          <div className="text-center">
+            <p className="text-gray-600 text-lg font-medium mb-2">No Menu items existing</p>
+            <p className="text-gray-500 text-sm">
+              {categoryFilter !== "all" 
+                ? `in category "${categoryFilter}"` 
+                : "with the current filters"}
             </p>
           </div>
-        ))}
-      </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-4 gap-6 mb-8">
+          {currentItems.map((item) => (
+            <div
+              key={item.product_id}
+              onClick={() => {
+                setSelectedProduct(item);
+                setNote(item.decline_reason || "");
+                fetchLinkedIngredients(item.product_id);
+              }}
+              className="bg-white rounded-lg shadow-md p-6 border hover:shadow-lg transition cursor-pointer"
+            >
+              <div className="h-24 bg-gray-100 rounded mb-4 flex items-center justify-center">
+                {item.image_path ? (
+                  <img
+                    src={`${API_BASE_URL}${item.image_path}`}
+                    alt={item.product_name}
+                    className="h-full object-cover rounded"
+                  />
+                ) : (
+                  "No Image"
+                )}
+              </div>
+
+              <h3 className="font-semibold">{item.product_name}</h3>
+              <p className="text-sm text-gray-500">{item.category_name}</p>
+              <p className="text-sm font-medium mt-1">₱ {item.price}</p>
+              <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold mt-2 ${item.vat_type === 'non-vat' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
+                {item.vat_type === 'non-vat' ? 'Non-VATable' : 'VATable'}
+              </span>
+
+              <p
+                className={`text-sm font-medium mt-3 ${
+                  item.approval_status === "APPROVED"
+                    ? "text-green-600"
+                    : item.approval_status === "PENDING"
+                    ? "text-yellow-600"
+                    : "text-red-600"
+                }`}
+              >
+                {item.approval_status}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Professional Modal */}
       {selectedProduct && (
