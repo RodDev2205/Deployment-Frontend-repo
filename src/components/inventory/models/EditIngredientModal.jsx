@@ -38,21 +38,30 @@ const EditIngredientModal = ({ isOpen, onClose, ingredient, onEdit, branches = [
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (mainRes.ok) {
-        const mainData = await mainRes.json();
-        setMainCategories(Array.isArray(mainData) ? mainData : mainData.data || []);
+      if (!mainRes.ok) {
+        console.error("Main categories fetch failed:", mainRes.status, await mainRes.text());
+        throw new Error(`Failed to fetch main categories: ${mainRes.status}`);
       }
+
+      const mainData = await mainRes.json();
+      console.log("Main categories received:", mainData);
+      setMainCategories(Array.isArray(mainData) ? mainData : mainData.data || []);
 
       const subRes = await fetch(`${API_BASE_URL}/api/inventory/sub-categories`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (subRes.ok) {
-        const subData = await subRes.json();
-        setSubCategories(Array.isArray(subData) ? subData : subData.data || []);
+      if (!subRes.ok) {
+        console.error("Sub categories fetch failed:", subRes.status, await subRes.text());
+        throw new Error(`Failed to fetch sub categories: ${subRes.status}`);
       }
+
+      const subData = await subRes.json();
+      console.log("Sub categories received:", subData);
+      setSubCategories(Array.isArray(subData) ? subData : subData.data || []);
     } catch (err) {
       console.error("Error fetching categories:", err);
+      alertError("Error", `Failed to load categories: ${err.message}`);
     } finally {
       setCategoriesLoading(false);
     }

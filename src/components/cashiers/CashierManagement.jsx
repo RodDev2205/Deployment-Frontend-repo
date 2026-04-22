@@ -63,18 +63,8 @@ export default function CashierManagement() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to add cashier");
 
-      // Add cashier to state with middle_name from form (backend may not return it)
-      setCashiers(prev => {
-        const cashierToAdd = {
-          ...data,
-          first_name: newCashier.first_name,
-          middle_name: newCashier.middle_name, // Use form data since backend may not return it
-          last_name: newCashier.last_name,
-          username: newCashier.username,
-          contact_number: newCashier.contact_number,
-        };
-        return [cashierToAdd, ...prev];
-      });
+      // Refetch cashiers to get complete data including branch_name from database
+      await fetchCashiers();
       
       success("Success", "Cashier added successfully!");
     } catch (err) {

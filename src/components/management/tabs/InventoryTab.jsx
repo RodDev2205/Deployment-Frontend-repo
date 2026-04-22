@@ -17,6 +17,8 @@ export default function InventoryTab() {
   const [errorMessage, setErrorMessage] = useState("");
   const [mainCategories, setMainCategories] = useState([]);
   const [subCategories, setSubCategories] = useState([]);
+  const [selectedMainCategoryId, setSelectedMainCategoryId] = useState('all');
+  const [selectedSubCategoryId, setSelectedSubCategoryId] = useState('all');
 
   const roleId = Number(localStorage.getItem('role_id'));
   const isSuperadmin = roleId === 3;
@@ -165,9 +167,17 @@ export default function InventoryTab() {
         selectedBranchId === 'all' ||
         String(item.branch_id) === String(selectedBranchId);
 
-      return matchesSearch && matchesBranch;
+      const matchesMainCategory =
+        selectedMainCategoryId === 'all' ||
+        Number(item.main_category_id) === Number(selectedMainCategoryId);
+
+      const matchesSubCategory =
+        selectedSubCategoryId === 'all' ||
+        Number(item.sub_category_id) === Number(selectedSubCategoryId);
+
+      return matchesSearch && matchesBranch && matchesMainCategory && matchesSubCategory;
     });
-  }, [inventory, search, selectedBranchId, isSuperadmin]);
+  }, [inventory, search, selectedBranchId, selectedMainCategoryId, selectedSubCategoryId, isSuperadmin]);
 
   const sortedInventory = useMemo(() => {
     return [...filteredInventory].sort((a, b) => {
@@ -241,7 +251,7 @@ export default function InventoryTab() {
       )}
 
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-wrap">
           <div className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-2 shadow-sm">
             <Search size={16} className="text-gray-500" />
             <input
@@ -252,6 +262,40 @@ export default function InventoryTab() {
               className="border-0 p-0 text-sm text-gray-700 focus:outline-none"
             />
           </div>
+
+          <select
+            value={selectedMainCategoryId}
+            onChange={(e) => {
+              setSelectedMainCategoryId(e.target.value);
+              setSelectedSubCategoryId('all');
+            }}
+            className="rounded-full border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+          >
+            <option value="all">All Main Categories</option>
+            {mainCategories.map((category) => (
+              <option key={category.main_category_id} value={category.main_category_id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={selectedSubCategoryId}
+            onChange={(e) => setSelectedSubCategoryId(e.target.value)}
+            className="rounded-full border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+          >
+            <option value="all">All Sub Categories</option>
+            {subCategories
+              .filter((sub) =>
+                selectedMainCategoryId === 'all' ||
+                Number(sub.main_category_id) === Number(selectedMainCategoryId)
+              )
+              .map((category) => (
+                <option key={category.sub_category_id} value={category.sub_category_id}>
+                  {category.name}
+                </option>
+              ))}
+          </select>
 
           {isSuperadmin && (
             <select
