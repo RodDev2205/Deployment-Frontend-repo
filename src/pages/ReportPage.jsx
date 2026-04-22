@@ -34,6 +34,70 @@ export default function ReportPage() {
   // Calendar states
   const [showCalendar, setShowCalendar] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(new Date());
+  const [showEndCalendar, setShowEndCalendar] = useState(false);
+  const [endCalendarMonth, setEndCalendarMonth] = useState(new Date());
+
+  // Date Range Preset Functions
+  const setDateRange = (start, end) => {
+    setStartDate(formatDate(start));
+    setEndDate(formatDate(end));
+  };
+
+  const setThisWeek = () => {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+    setDateRange(monday, today);
+  };
+
+  const setLastWeek = () => {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+    const lastWeekMonday = new Date(monday);
+    lastWeekMonday.setDate(monday.getDate() - 7);
+    const lastWeekSunday = new Date(monday);
+    lastWeekSunday.setDate(monday.getDate() - 1);
+    setDateRange(lastWeekMonday, lastWeekSunday);
+  };
+
+  const setThisMonth = () => {
+    const today = new Date();
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    setDateRange(firstDay, today);
+  };
+
+  const setLastMonth = () => {
+    const today = new Date();
+    const firstDayThisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const lastDayLastMonth = new Date(firstDayThisMonth);
+    lastDayLastMonth.setDate(0);
+    const firstDayLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    setDateRange(firstDayLastMonth, lastDayLastMonth);
+  };
+
+  const setLast7Days = () => {
+    const today = new Date();
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(today.getDate() - 7);
+    setDateRange(sevenDaysAgo, today);
+  };
+
+  const setLast30Days = () => {
+    const today = new Date();
+    const thirtyDaysAgo = new Date(today);
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+    setDateRange(thirtyDaysAgo, today);
+  };
+
+  const setLast90Days = () => {
+    const today = new Date();
+    const ninetyDaysAgo = new Date(today);
+    ninetyDaysAgo.setDate(today.getDate() - 90);
+    setDateRange(ninetyDaysAgo, today);
+  };
 
   // sales trend data fetched from backend
   const [trendData, setTrendData] = useState([]);
@@ -218,13 +282,23 @@ export default function ReportPage() {
     selectedDate.setDate(day);
     const formatted = formatDate(selectedDate);
     setStartDate(formatted);
+    setEndCalendarMonth(selectedDate);
     setShowCalendar(false);
+  };
+
+  const handleEndDateSelect = (day) => {
+    const selectedDate = new Date(endCalendarMonth);
+    selectedDate.setDate(day);
+    const formatted = formatDate(selectedDate);
+    setEndDate(formatted);
+    setShowEndCalendar(false);
   };
 
   const resetDates = () => {
     setStartDate(formatDate(sevenDaysAgo));
     setEndDate(formatDate(today));
     setShowCalendar(false);
+    setShowEndCalendar(false);
   };
 
   const setToday = () => {
@@ -251,6 +325,38 @@ export default function ReportPage() {
         <button
           key={day}
           onClick={() => handleDateSelect(day)}
+          className={`text-center py-2 text-sm rounded-lg transition ${
+            isSelected 
+              ? 'bg-blue-500 text-white font-bold' 
+              : 'hover:bg-gray-100 text-gray-700'
+          }`}
+        >
+          {day}
+        </button>
+      );
+    }
+
+    return days;
+  };
+
+  const renderEndCalendar = () => {
+    const daysInMonth = getDaysInMonth(endCalendarMonth);
+    const firstDay = getFirstDayOfMonth(endCalendarMonth);
+    const days = [];
+
+    // Empty cells for days before month starts
+    for (let i = 0; i < firstDay; i++) {
+      days.push(<div key={`empty-${i}`} className="text-center py-2"></div>);
+    }
+
+    // Days of month
+    for (let day = 1; day <= daysInMonth; day++) {
+      const cellDate = formatDate(new Date(endCalendarMonth.getFullYear(), endCalendarMonth.getMonth(), day));
+      const isSelected = cellDate === endDate;
+      days.push(
+        <button
+          key={day}
+          onClick={() => handleEndDateSelect(day)}
           className={`text-center py-2 text-sm rounded-lg transition ${
             isSelected 
               ? 'bg-blue-500 text-white font-bold' 
@@ -545,8 +651,9 @@ export default function ReportPage() {
         <div className="bg-white rounded-2xl shadow-sm p-6">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-4 flex-wrap">
-              {/* Date Calendar */}
+              {/* Start Date Calendar */}
               <div className="relative">
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Start Date</label>
                 <button
                   onClick={() => setShowCalendar(!showCalendar)}
                   className="flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-2 hover:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -582,6 +689,64 @@ export default function ReportPage() {
                         </div>
                       ))}
                       {renderCalendar()}
+                    </div>
+
+                    <div className="flex gap-2 justify-between">
+                      <button
+                        onClick={resetDates}
+                        className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                      >
+                        Clear
+                      </button>
+                      <button
+                        onClick={setToday}
+                        className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                      >
+                        Today
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* End Date Calendar */}
+              <div className="relative">
+                <label className="block text-xs font-semibold text-gray-600 mb-1">End Date</label>
+                <button
+                  onClick={() => setShowEndCalendar(!showEndCalendar)}
+                  className="flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-2 hover:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500"
+                >
+                  <Calendar size={18} className="text-gray-600" />
+                  <span className="text-sm font-medium">{endDate}</span>
+                </button>
+                
+                {showEndCalendar && (
+                  <div className="absolute left-0 mt-2 bg-white border border-gray-300 rounded-lg shadow-lg p-4 z-50 w-80">
+                    <div className="flex items-center justify-between mb-4">
+                      <button
+                        onClick={() => setEndCalendarMonth(new Date(endCalendarMonth.getFullYear(), endCalendarMonth.getMonth() - 1))}
+                        className="p-1 hover:bg-gray-100 rounded"
+                      >
+                        <ChevronUp size={20} className="text-gray-600" />
+                      </button>
+                      <span className="font-semibold text-gray-800">
+                        {endCalendarMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                      </span>
+                      <button
+                        onClick={() => setEndCalendarMonth(new Date(endCalendarMonth.getFullYear(), endCalendarMonth.getMonth() + 1))}
+                        className="p-1 hover:bg-gray-100 rounded"
+                      >
+                        <ChevronDown size={20} className="text-gray-600" />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-7 gap-2 mb-4">
+                      {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
+                        <div key={day} className="text-center text-xs font-bold text-gray-600 py-2">
+                          {day}
+                        </div>
+                      ))}
+                      {renderEndCalendar()}
                     </div>
 
                     <div className="flex gap-2 justify-between">
