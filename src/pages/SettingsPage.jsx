@@ -55,9 +55,10 @@ export default function SimpleSettings() {
   const [showDiscountModal, setShowDiscountModal] = useState(false);
   const [editingDiscount, setEditingDiscount] = useState(null);
   const [discountForm, setDiscountForm] = useState({
-    name: '',
-    rate: '',
-    description: ''
+    discount_name: '',
+    discount_type: 'percentage',
+    discount_value: '',
+    status: 'active'
   });
 
   // Main & Sub Categories state
@@ -819,16 +820,18 @@ export default function SimpleSettings() {
     if (discount) {
       setEditingDiscount(discount);
       setDiscountForm({
-        name: discount.name,
-        rate: discount.rate,
-        description: discount.description || ''
+        discount_name: discount.discount_name,
+        discount_type: discount.discount_type || 'percentage',
+        discount_value: discount.discount_value,
+        status: discount.status || 'active'
       });
     } else {
       setEditingDiscount(null);
       setDiscountForm({
-        name: '',
-        rate: '',
-        description: ''
+        discount_name: '',
+        discount_type: 'percentage',
+        discount_value: '',
+        status: 'active'
       });
     }
     setShowDiscountModal(true);
@@ -838,9 +841,10 @@ export default function SimpleSettings() {
     setShowDiscountModal(false);
     setEditingDiscount(null);
     setDiscountForm({
-      name: '',
-      rate: '',
-      description: ''
+      discount_name: '',
+      discount_type: 'percentage',
+      discount_value: '',
+      status: 'active'
     });
   };
 
@@ -861,18 +865,18 @@ export default function SimpleSettings() {
         return;
       }
 
-      if (!discountForm.name.trim()) {
+      if (!discountForm.discount_name.trim()) {
         error('Validation Error', 'Discount name is required');
         return;
       }
 
-      if (!discountForm.rate || discountForm.rate < 0 || discountForm.rate > 100) {
-        error('Validation Error', 'Discount rate must be between 0 and 100');
+      if (!discountForm.discount_value || discountForm.discount_value < 0) {
+        error('Validation Error', 'Discount value must be a positive number');
         return;
       }
 
       const endpoint = editingDiscount
-        ? `${API_BASE_URL}/api/discounts/${editingDiscount.id}`
+        ? `${API_BASE_URL}/api/discounts/${editingDiscount.discount_id}`
         : `${API_BASE_URL}/api/discounts`;
 
       const method = editingDiscount ? 'PUT' : 'POST';
@@ -922,13 +926,14 @@ export default function SimpleSettings() {
         return;
       }
 
+      const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
       const response = await fetch(`${API_BASE_URL}/api/discounts/${discountId}/toggle-status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ is_active: !currentStatus })
+        body: JSON.stringify({ status: newStatus })
       });
 
       if (!response.ok) {
@@ -939,7 +944,7 @@ export default function SimpleSettings() {
       await fetchDiscounts(token);
       success(
         'Discount Status Updated',
-        `Discount has been ${!currentStatus ? 'activated' : 'deactivated'} successfully.`
+        `Discount has been ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully.`
       );
     } catch (err) {
       console.error('Error toggling discount status:', err);
@@ -1703,27 +1708,27 @@ export default function SimpleSettings() {
                     <thead className="bg-gray-100 border-b border-gray-300">
                       <tr>
                         <th className="px-4 py-3 text-left font-semibold text-gray-700">Discount Name</th>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700">Rate (%)</th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700">Type</th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700">Value</th>
                         <th className="px-4 py-3 text-left font-semibold text-gray-700">Status</th>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700">Description</th>
                         <th className="px-4 py-3 text-left font-semibold text-gray-700">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {discounts.map((discount, index) => (
-                        <tr key={discount.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                          <td className="px-4 py-3 text-gray-800 font-medium">{discount.name}</td>
-                          <td className="px-4 py-3 text-gray-800">{discount.rate}%</td>
+                        <tr key={discount.discount_id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                          <td className="px-4 py-3 text-gray-800 font-medium">{discount.discount_name}</td>
+                          <td className="px-4 py-3 text-gray-800 capitalize">{discount.discount_type}</td>
+                          <td className="px-4 py-3 text-gray-800">{discount.discount_value}{discount.discount_type === 'percentage' ? '%' : ''}</td>
                           <td className="px-4 py-3">
                             <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                              discount.is_active 
+                              discount.status === 'active'
                                 ? 'bg-green-100 text-green-700' 
                                 : 'bg-gray-100 text-gray-700'
                             }`}>
-                              {discount.is_active ? 'Active' : 'Inactive'}
+                              {discount.status === 'active' ? 'Active' : 'Inactive'}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-gray-600 text-xs">{discount.description || '-'}</td>
                           <td className="px-4 py-3 space-x-2 flex flex-wrap gap-2">
                             <button
                               onClick={() => handleOpenDiscountModal(discount)}
@@ -1733,18 +1738,18 @@ export default function SimpleSettings() {
                             </button>
                             {roleId === 3 && (
                               <button
-                                onClick={() => handleToggleDiscountStatus(discount.id, discount.is_active)}
+                                onClick={() => handleToggleDiscountStatus(discount.discount_id, discount.status)}
                                 className={`px-3 py-1 text-white text-xs rounded ${
-                                  discount.is_active
+                                  discount.status === 'active'
                                     ? 'bg-orange-500 hover:bg-orange-600'
                                     : 'bg-green-500 hover:bg-green-600'
                                 }`}
                               >
-                                {discount.is_active ? 'Deactivate' : 'Activate'}
+                                {discount.status === 'active' ? 'Deactivate' : 'Activate'}
                               </button>
                             )}
                             <button
-                              onClick={() => handleDeleteDiscount(discount.id)}
+                              onClick={() => handleDeleteDiscount(discount.discount_id)}
                               className="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600"
                             >
                               Delete
@@ -2131,8 +2136,8 @@ export default function SimpleSettings() {
                     <label className="block text-sm text-gray-700 mb-1">Discount Name</label>
                     <input
                       type="text"
-                      name="name"
-                      value={discountForm.name}
+                      name="discount_name"
+                      value={discountForm.discount_name}
                       onChange={handleDiscountFormChange}
                       placeholder="e.g., PWD, Senior Citizen"
                       className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
@@ -2141,31 +2146,50 @@ export default function SimpleSettings() {
                   </div>
 
                   <div>
-                    <label className="block text-sm text-gray-700 mb-1">Discount Rate (%)</label>
+                    <label className="block text-sm text-gray-700 mb-1">Discount Type</label>
+                    <select
+                      name="discount_type"
+                      value={discountForm.discount_type}
+                      onChange={handleDiscountFormChange}
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                      required
+                    >
+                      <option value="percentage">Percentage (%)</option>
+                      <option value="fixed">Fixed Amount</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">
+                      Discount Value {discountForm.discount_type === 'percentage' ? '(%)' : ''}
+                    </label>
                     <input
                       type="number"
-                      name="rate"
-                      value={discountForm.rate}
+                      name="discount_value"
+                      value={discountForm.discount_value}
                       onChange={handleDiscountFormChange}
                       placeholder="0.00"
                       className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
                       step="0.01"
                       min="0"
-                      max="100"
                       required
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-sm text-gray-700 mb-1">Description (Optional)</label>
-                    <textarea
-                      name="description"
-                      value={discountForm.description}
-                      onChange={handleDiscountFormChange}
-                      placeholder="Enter description"
-                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 resize-none h-20"
-                    />
-                  </div>
+                  {editingDiscount && (
+                    <div>
+                      <label className="block text-sm text-gray-700 mb-1">Status</label>
+                      <select
+                        name="status"
+                        value={discountForm.status}
+                        onChange={handleDiscountFormChange}
+                        className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                      >
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                      </select>
+                    </div>
+                  )}
 
                   <button
                     type="submit"
