@@ -60,8 +60,10 @@ export default function PaymentModal({ subtotal = 0, vatAdjustedSubtotal = 0, to
   }, [discountType, safeSubtotal, safeVatAdjustedSubtotal, itemDiscountData]);
 
   const finalAmount = Math.max(effectiveSubtotal - discountAmount, 0);
-  const change = safeAmountPaid - finalAmount;
+  const rawChange = safeAmountPaid - finalAmount;
+  const change = Math.max(rawChange, 0);
   const isValidPayment = safeAmountPaid >= finalAmount && finalAmount > 0;
+  const showInsufficientPayment = rawChange < 0;
 
   // ensure orderType is valid
   const validOrder = orderType === 'dine-in' || orderType === 'takeout';
@@ -307,20 +309,10 @@ export default function PaymentModal({ subtotal = 0, vatAdjustedSubtotal = 0, to
               <span className="font-semibold text-gray-700">
                 Change
               </span>
-              <span
-                className={`text-2xl font-bold ${
-                  change >= 0 ? "text-green-600" : "text-red-600"
-                }`}
-              >
+              <span className="text-2xl font-bold text-green-600">
                 ₱{change.toFixed(2)}
               </span>
             </div>
-
-            {change < 0 && (
-              <p className="text-xs text-red-600 mt-1">
-                Amount paid is insufficient.
-              </p>
-            )}
           </div>
 
           {/* Buttons */}

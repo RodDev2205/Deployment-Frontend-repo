@@ -51,6 +51,29 @@ export default function ChatRoom() {
     socketRef.current.on("receiveMessage", (msg) => {
       console.log("📨 Received message:", msg);
       setMessages((prev) => [...prev, msg]);
+
+      // Update branches with latest message info and re-sort
+      setBranches((prevBranches) => {
+        const updated = prevBranches.map(branch => {
+          if (branch.branch_id === msg.branch_id) {
+            return {
+              ...branch,
+              lastMessage: msg.message || (msg.attachment_name ? msg.attachment_name : 'Attachment'),
+              lastTime: new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+              sender_name: msg.full_name || msg.username,
+              created_at: msg.created_at,
+            };
+          }
+          return branch;
+        });
+        // Sort by latest message time descending
+        return updated.sort((a, b) => {
+          if (!a.created_at && !b.created_at) return 0;
+          if (!a.created_at) return 1;
+          if (!b.created_at) return -1;
+          return new Date(b.created_at) - new Date(a.created_at);
+        });
+      });
     });
 
     // Listen for user join/leave notifications
@@ -86,9 +109,23 @@ export default function ChatRoom() {
         });
         const data = await res.json();
         console.log("📦 Branches fetched:", data);
-        setBranches(data || []);
-        if (data && data.length > 0 && !activeBranchId) {
-          setActiveBranchId(data[0].branch_id);
+        const sortedBranches = (data || []).sort((a, b) => {
+          if (!a.created_at && !b.created_at) return 0;
+          if (!a.created_at) return 1;
+          if (!b.created_at) return -1;
+          return new Date(b.created_at) - new Date(a.created_at);
+        });
+        setBranches(sortedBranches);
+
+        // For superadmin, join all branch rooms for real-time updates
+        if (currentUser && currentUser.role_id === 3) {
+          sortedBranches.forEach(branch => {
+            socketRef.current.emit("joinBranchRoom", { branch_id: branch.branch_id });
+          });
+        }
+
+        if (sortedBranches.length > 0 && !activeBranchId) {
+          setActiveBranchId(sortedBranches[0].branch_id);
         }
       } catch (err) {
         console.error("Error fetching branches:", err);
@@ -98,7 +135,18 @@ export default function ChatRoom() {
     };
 
     fetchBranches();
-  }, [token, activeBranchId]);
+  }, [token, activeBranchId, currentUser]);
+
+  // ======== SUPERADMIN JOIN ALL BRANCH ROOMS ========
+  useEffect(() => {
+    if (!token || !currentUser || currentUser.role_id !== 3 || !socketRef.current || branches.length === 0) {
+      return;
+    }
+
+    branches.forEach(branch => {
+      socketRef.current.emit("joinBranchRoom", { branch_id: branch.branch_id });
+    });
+  }, [token, currentUser, branches]);
 
   // ======== JOIN ROOM & FETCH MESSAGES WHEN BRANCH CHANGES ========
   useEffect(() => {
@@ -179,6 +227,30 @@ export default function ChatRoom() {
     };
 
     console.log("📤 Sending message:", payload);
+
+    // Immediately update branches for instant UI feedback
+    const now = new Date();
+    setBranches((prevBranches) => {
+      const updated = prevBranches.map(branch => {
+        if (branch.branch_id === activeBranchId) {
+          return {
+            ...branch,
+            lastMessage: message.trim() || (attachment_name ? attachment_name : 'Attachment'),
+            lastTime: now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            sender_name: currentUser.full_name || currentUser.username,
+            created_at: now.toISOString(),
+          };
+        }
+        return branch;
+      });
+      // Sort by latest message time descending
+      return updated.sort((a, b) => {
+        if (!a.created_at && !b.created_at) return 0;
+        if (!a.created_at) return 1;
+        if (!b.created_at) return -1;
+        return new Date(b.created_at) - new Date(a.created_at);
+      });
+    });
 
     socketRef.current.emit("sendMessage", payload);
 
